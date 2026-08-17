@@ -1,5 +1,5 @@
 use crate::{
-    drone::{Coordinates, Drone, DroneTask},
+    drone::{Coordinates, Drone, DroneTask, Mission},
     errors::AerisError,
     loader::{load_app_config, load_drone_catalog},
     simulation::Simulation,
@@ -19,6 +19,8 @@ fn main() -> Result<(), AerisError> {
 
     let mut simulation = Simulation::new();
 
+    let mut mission_drone_id = None;
+
     for fleet_entry in app_config.fleet {
         let drone_config = drone_catalog
             .drones
@@ -37,27 +39,57 @@ fn main() -> Result<(), AerisError> {
             drone.connect()?;
             drone.arm()?;
 
-            drone.assign_task(Some(DroneTask::Takeoff {
-                target_altitude: 10.0,
-            }));
+            if mission_drone_id.is_none() {
+                mission_drone_id = Some(drone.id);
+            }
 
             simulation.add_drone(drone);
         }
     }
 
-    for tick in 1..=60 {
+    let drone_id = mission_drone_id.ok_or(AerisError::DroneNotFound)?;
+
+    let mut mission = Mission::new(
+        "takeoff-and-land".to_string(),
+        vec![
+            DroneTask::Takeoff {
+                target_altitude: 10.0,
+            },
+            DroneTask::ReturnHome,
+            DroneTask::Land,
+        ],
+    );
+
+    if let Some(task) = mission.current_task() {
+        simulation.assign_task(drone_id, task.clone())?;
+    }
+
+    for tick in 1..=200 {
         simulation.tick(DELTA_TIME)?;
 
-        println!("Tick #{tick}");
+        let drone = simulation
+            .drones()
+            .iter()
+            .find(|drone| drone.id == drone_id)
+            .ok_or(AerisError::DroneNotFound)?;
 
-        for drone in simulation.drones() {
-            println!(
-                "  {} | alt: {:.1}m | mode: {:?} | task: {:?}",
-                drone.id, drone.altitude, drone.flight_mode, drone.current_task,
-            );
+        println!(
+            "Tick #{tick:03} | alt: {:>5.1}m | mode: {:?} | task: {:?}",
+            drone.altitude, drone.flight_mode, drone.current_task,
+        );
+
+        if drone.current_task.is_none() {
+            mission.next_task();
+
+            if mission.is_finished() {
+                println!("Mission '{}' finished", mission.name);
+                break;
+            }
+
+            if let Some(task) = mission.current_task() {
+                simulation.assign_task(drone_id, task.clone())?;
+            }
         }
-
-        println!();
     }
 
     Ok(())

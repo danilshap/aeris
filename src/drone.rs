@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 pub use config::DroneConfig;
 pub use mission::DroneTask;
+pub use mission::Mission;
 
 #[derive(Debug)]
 pub struct Coordinates {
@@ -115,6 +116,29 @@ impl Drone {
 
                 Ok(())
             }
+            Some(DroneTask::ReturnHome) => {
+                self.return_home()?;
+                self.current_task = None;
+
+                Ok(())
+            }
+            Some(DroneTask::Land) => {
+                if self.flight_mode == FlightMode::Hold
+                    || self.flight_mode == FlightMode::ReturnHome
+                {
+                    self.land()?;
+                }
+
+                self.altitude -= delta_time * self.config.descent_speed;
+
+                if self.altitude <= 0.0 {
+                    self.altitude = 0.0;
+                    self.flight_mode = FlightMode::Idle;
+                    self.current_task = None;
+                }
+
+                Ok(())
+            }
             _ => Ok(()),
         }
     }
@@ -181,7 +205,7 @@ impl Drone {
     }
 
     pub fn land(&mut self) -> Result<(), AerisError> {
-        if self.flight_mode != FlightMode::ReturnHome {
+        if self.flight_mode != FlightMode::ReturnHome && self.flight_mode != FlightMode::Hold {
             return Err(AerisError::InvalidFlightModeTransition {
                 from: format!("{:?}", self.flight_mode),
                 to: "Landing".to_string(),
@@ -189,8 +213,7 @@ impl Drone {
         }
 
         self.flight_mode = FlightMode::Landing;
-        // todo: process landing with timner
-        self.flight_mode = FlightMode::Idle;
+
         Ok(())
     }
 

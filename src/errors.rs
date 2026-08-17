@@ -16,4 +16,7 @@ pub enum AerisError {
 
     #[error("Drone type '{0}' not found in drone catalog")]
     DroneTypeNotFound(String),
+
+    #[error("Drone not found")]
+    DroneNotFound,
 }
