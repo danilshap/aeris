@@ -1,0 +1,11 @@
+[[fleet]]
+drone_type = "scout"
+count = 3
+
+[[fleet]]
+drone_type = "recon"
+count = 10
+
+[[fleet]]
+drone_type = "cargo_light"
+count = 15

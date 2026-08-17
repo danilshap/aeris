@@ -1,0 +1,201 @@
+mod config;
+mod mission;
+
+use crate::errors::AerisError;
+use uuid::Uuid;
+
+pub use config::DroneConfig;
+pub use mission::DroneTask;
+
+#[derive(Debug)]
+pub struct Coordinates {
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
+#[derive(Debug, PartialEq)]
+enum ConnectionStatus {
+    Disconnected,
+    Connecting,
+    Connected,
+    Lost,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum FlightMode {
+    Idle,
+    Armed,
+    Takeoff,
+    Hold,
+    Mission,
+    ReturnHome,
+    Landing,
+    Emergency,
+}
+
+#[derive(Debug)]
+pub struct Drone {
+    pub id: Uuid,
+    coordinates: Coordinates,
+    pub altitude: f32,
+    speed: f32,
+    charge: u8,
+    connection_status: ConnectionStatus,
+    pub flight_mode: FlightMode,
+    config: DroneConfig,
+    pub current_task: Option<DroneTask>,
+}
+
+impl Drone {
+    pub fn new(
+        coordinates: Coordinates,
+        altitude: f32,
+        speed: f32,
+        charge: u8,
+        config: DroneConfig,
+    ) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            coordinates,
+            altitude,
+            speed,
+            charge,
+            connection_status: ConnectionStatus::Disconnected,
+            flight_mode: FlightMode::Idle,
+            config,
+            current_task: None,
+        }
+    }
+
+    pub fn connect(&mut self) -> Result<(), AerisError> {
+        match self.connection_status {
+            ConnectionStatus::Connecting => Err(AerisError::UnexeptbleState {
+                action: String::from("connect"),
+                state: format!("{:?}", self.connection_status),
+            }),
+            ConnectionStatus::Connected => Ok(()),
+            ConnectionStatus::Disconnected | ConnectionStatus::Lost => {
+                self.connection_status = ConnectionStatus::Connecting;
+                // todo: timer for connection
+                self.connection_status = ConnectionStatus::Connected;
+                Ok(())
+            }
+        }
+    }
+
+    pub fn disconnect(&mut self) -> Result<(), AerisError> {
+        match self.connection_status {
+            ConnectionStatus::Disconnected => Ok(()),
+            _ => {
+                // todo: timer for disconnection
+                self.connection_status = ConnectionStatus::Disconnected;
+                Ok(())
+            }
+        }
+    }
+
+    pub fn assign_task(&mut self, new_task: Option<DroneTask>) {
+        self.current_task = new_task;
+    }
+
+    pub fn tick(&mut self, delta_time: f32) -> Result<(), AerisError> {
+        match self.current_task {
+            Some(DroneTask::Takeoff { target_altitude }) => {
+                if self.flight_mode == FlightMode::Armed {
+                    self.takeoff()?;
+                }
+
+                self.altitude += delta_time * self.config.climb_speed;
+
+                if self.altitude >= target_altitude {
+                    self.altitude = target_altitude;
+                    self.current_task = None;
+                    self.hold()?;
+                }
+
+                Ok(())
+            }
+            _ => Ok(()),
+        }
+    }
+
+    pub fn arm(&mut self) -> Result<(), AerisError> {
+        if self.flight_mode != FlightMode::Idle {
+            return Err(AerisError::InvalidFlightModeTransition {
+                from: format!("{:?}", self.flight_mode),
+                to: "Armed".to_string(),
+            });
+        }
+
+        self.flight_mode = FlightMode::Armed;
+        Ok(())
+    }
+
+    pub fn takeoff(&mut self) -> Result<(), AerisError> {
+        if self.flight_mode != FlightMode::Armed {
+            return Err(AerisError::InvalidFlightModeTransition {
+                from: format!("{:?}", self.flight_mode),
+                to: "Takeoff".to_string(),
+            });
+        }
+
+        self.flight_mode = FlightMode::Takeoff;
+
+        Ok(())
+    }
+
+    pub fn hold(&mut self) -> Result<(), AerisError> {
+        if self.flight_mode != FlightMode::Takeoff && self.flight_mode != FlightMode::Mission {
+            return Err(AerisError::InvalidFlightModeTransition {
+                from: format!("{:?}", self.flight_mode),
+                to: "Hold".to_string(),
+            });
+        }
+
+        self.flight_mode = FlightMode::Hold;
+        Ok(())
+    }
+
+    pub fn start_mission(&mut self) -> Result<(), AerisError> {
+        if self.flight_mode != FlightMode::Takeoff && self.flight_mode != FlightMode::Hold {
+            return Err(AerisError::InvalidFlightModeTransition {
+                from: format!("{:?}", self.flight_mode),
+                to: "Mission".to_string(),
+            });
+        }
+
+        self.flight_mode = FlightMode::Mission;
+        Ok(())
+    }
+
+    pub fn return_home(&mut self) -> Result<(), AerisError> {
+        if self.flight_mode != FlightMode::Hold && self.flight_mode != FlightMode::Mission {
+            return Err(AerisError::InvalidFlightModeTransition {
+                from: format!("{:?}", self.flight_mode),
+                to: "ReturnHome".to_string(),
+            });
+        }
+
+        self.flight_mode = FlightMode::ReturnHome;
+        Ok(())
+    }
+
+    pub fn land(&mut self) -> Result<(), AerisError> {
+        if self.flight_mode != FlightMode::ReturnHome {
+            return Err(AerisError::InvalidFlightModeTransition {
+                from: format!("{:?}", self.flight_mode),
+                to: "Landing".to_string(),
+            });
+        }
+
+        self.flight_mode = FlightMode::Landing;
+        // todo: process landing with timner
+        self.flight_mode = FlightMode::Idle;
+        Ok(())
+    }
+
+    pub fn emergency(&mut self) -> Result<(), AerisError> {
+        self.flight_mode = FlightMode::Emergency;
+        Ok(())
+    }
+}
