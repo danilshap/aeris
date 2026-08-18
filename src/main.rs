@@ -56,21 +56,7 @@ fn main() -> Result<(), AerisError> {
         simulation.tick(DELTA_TIME)?;
 
         for (drone_id, mission) in &mut drone_missions {
-            let task_finished = simulation
-                .drones()
-                .iter()
-                .find(|drone| drone.id() == *drone_id)
-                .ok_or(AerisError::DroneNotFound)?
-                .current_task()
-                .is_none();
-
-            if task_finished && !mission.is_finished() {
-                mission.next_task();
-
-                if let Some(task) = mission.current_task() {
-                    simulation.assign_task(*drone_id, task.clone())?;
-                }
-            }
+            simulation.update_mission(*drone_id, mission)?;
         }
 
         println!("Tick #{tick:03}");
