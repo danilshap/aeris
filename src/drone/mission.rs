@@ -1,4 +1,7 @@
-#[derive(Debug, Clone)]
+use serde::Deserialize;
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(tag = "type")]
 pub enum DroneTask {
     Takeoff { target_altitude: f32 },
     Hold,

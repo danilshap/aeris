@@ -1,0 +1,30 @@
+name = "recon-alpha"
+
+[[groups]]
+drone_type = "scout"
+count = 3
+
+[[groups.tasks]]
+type = "Takeoff"
+target_altitude = 10.0
+
+[[groups.tasks]]
+type = "ReturnHome"
+
+[[groups.tasks]]
+type = "Land"
+
+
+[[groups]]
+drone_type = "recon"
+count = 2
+
+[[groups.tasks]]
+type = "Takeoff"
+target_altitude = 20.0
+
+[[groups.tasks]]
+type = "ReturnHome"
+
+[[groups.tasks]]
+type = "Land"

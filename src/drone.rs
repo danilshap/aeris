@@ -36,15 +36,15 @@ pub enum FlightMode {
 
 #[derive(Debug)]
 pub struct Drone {
-    pub id: Uuid,
+    id: Uuid,
     coordinates: Coordinates,
-    pub altitude: f32,
+    altitude: f32,
     speed: f32,
     charge: u8,
     connection_status: ConnectionStatus,
-    pub flight_mode: FlightMode,
+    flight_mode: FlightMode,
     config: DroneConfig,
-    pub current_task: Option<DroneTask>,
+    current_task: Option<DroneTask>,
 }
 
 impl Drone {
@@ -66,6 +66,22 @@ impl Drone {
             config,
             current_task: None,
         }
+    }
+
+    pub fn id(&self) -> Uuid {
+        self.id
+    }
+
+    pub fn altitude(&self) -> f32 {
+        self.altitude
+    }
+
+    pub fn flight_mode(&self) -> &FlightMode {
+        &self.flight_mode
+    }
+
+    pub fn current_task(&self) -> Option<&DroneTask> {
+        self.current_task.as_ref()
     }
 
     pub fn connect(&mut self) -> Result<(), AerisError> {
@@ -113,14 +129,10 @@ impl Drone {
                     self.current_task = None;
                     self.hold()?;
                 }
-
-                Ok(())
             }
             Some(DroneTask::ReturnHome) => {
                 self.return_home()?;
                 self.current_task = None;
-
-                Ok(())
             }
             Some(DroneTask::Land) => {
                 if self.flight_mode == FlightMode::Hold
@@ -136,11 +148,11 @@ impl Drone {
                     self.flight_mode = FlightMode::Idle;
                     self.current_task = None;
                 }
-
-                Ok(())
             }
-            _ => Ok(()),
+            _ => {}
         }
+
+        Ok(())
     }
 
     pub fn arm(&mut self) -> Result<(), AerisError> {

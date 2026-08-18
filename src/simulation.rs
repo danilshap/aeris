@@ -26,7 +26,7 @@ impl Simulation {
         let drone = self
             .drones
             .iter_mut()
-            .find(|drone| drone.id == drone_id)
+            .find(|drone| drone.id() == drone_id)
             .ok_or(AerisError::DroneNotFound)?;
 
         drone.assign_task(Some(task));
