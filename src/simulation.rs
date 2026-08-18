@@ -14,7 +14,7 @@ impl Simulation {
         Self { drones: vec![] }
     }
 
-    pub fn drones(&self) -> &Vec<Drone> {
+    pub fn drones(&self) -> &[Drone] {
         &self.drones
     }
 

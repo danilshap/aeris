@@ -7,4 +7,6 @@ pub struct DroneConfig {
     pub climb_speed: f32,
     pub descent_speed: f32,
     pub max_altitude: f32,
+    pub battery_capacity: f32,
+    pub consumption_per_second: f32,
 }

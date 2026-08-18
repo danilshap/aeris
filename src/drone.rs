@@ -1,5 +1,7 @@
 mod config;
+mod flight;
 mod mission;
+mod tick;
 
 use crate::errors::AerisError;
 use uuid::Uuid;
@@ -40,7 +42,7 @@ pub struct Drone {
     coordinates: Coordinates,
     altitude: f32,
     speed: f32,
-    charge: u8,
+    battery: f32,
     connection_status: ConnectionStatus,
     flight_mode: FlightMode,
     config: DroneConfig,
@@ -52,7 +54,7 @@ impl Drone {
         coordinates: Coordinates,
         altitude: f32,
         speed: f32,
-        charge: u8,
+        battery: f32,
         config: DroneConfig,
     ) -> Self {
         Self {
@@ -60,7 +62,7 @@ impl Drone {
             coordinates,
             altitude,
             speed,
-            charge,
+            battery,
             connection_status: ConnectionStatus::Disconnected,
             flight_mode: FlightMode::Idle,
             config,
@@ -113,124 +115,5 @@ impl Drone {
 
     pub fn assign_task(&mut self, new_task: Option<DroneTask>) {
         self.current_task = new_task;
-    }
-
-    pub fn tick(&mut self, delta_time: f32) -> Result<(), AerisError> {
-        match self.current_task {
-            Some(DroneTask::Takeoff { target_altitude }) => {
-                if self.flight_mode == FlightMode::Armed {
-                    self.takeoff()?;
-                }
-
-                self.altitude += delta_time * self.config.climb_speed;
-
-                if self.altitude >= target_altitude {
-                    self.altitude = target_altitude;
-                    self.current_task = None;
-                    self.hold()?;
-                }
-            }
-            Some(DroneTask::ReturnHome) => {
-                self.return_home()?;
-                self.current_task = None;
-            }
-            Some(DroneTask::Land) => {
-                if self.flight_mode == FlightMode::Hold
-                    || self.flight_mode == FlightMode::ReturnHome
-                {
-                    self.land()?;
-                }
-
-                self.altitude -= delta_time * self.config.descent_speed;
-
-                if self.altitude <= 0.0 {
-                    self.altitude = 0.0;
-                    self.flight_mode = FlightMode::Idle;
-                    self.current_task = None;
-                }
-            }
-            _ => {}
-        }
-
-        Ok(())
-    }
-
-    pub fn arm(&mut self) -> Result<(), AerisError> {
-        if self.flight_mode != FlightMode::Idle {
-            return Err(AerisError::InvalidFlightModeTransition {
-                from: format!("{:?}", self.flight_mode),
-                to: "Armed".to_string(),
-            });
-        }
-
-        self.flight_mode = FlightMode::Armed;
-        Ok(())
-    }
-
-    pub fn takeoff(&mut self) -> Result<(), AerisError> {
-        if self.flight_mode != FlightMode::Armed {
-            return Err(AerisError::InvalidFlightModeTransition {
-                from: format!("{:?}", self.flight_mode),
-                to: "Takeoff".to_string(),
-            });
-        }
-
-        self.flight_mode = FlightMode::Takeoff;
-
-        Ok(())
-    }
-
-    pub fn hold(&mut self) -> Result<(), AerisError> {
-        if self.flight_mode != FlightMode::Takeoff && self.flight_mode != FlightMode::Mission {
-            return Err(AerisError::InvalidFlightModeTransition {
-                from: format!("{:?}", self.flight_mode),
-                to: "Hold".to_string(),
-            });
-        }
-
-        self.flight_mode = FlightMode::Hold;
-        Ok(())
-    }
-
-    pub fn start_mission(&mut self) -> Result<(), AerisError> {
-        if self.flight_mode != FlightMode::Takeoff && self.flight_mode != FlightMode::Hold {
-            return Err(AerisError::InvalidFlightModeTransition {
-                from: format!("{:?}", self.flight_mode),
-                to: "Mission".to_string(),
-            });
-        }
-
-        self.flight_mode = FlightMode::Mission;
-        Ok(())
-    }
-
-    pub fn return_home(&mut self) -> Result<(), AerisError> {
-        if self.flight_mode != FlightMode::Hold && self.flight_mode != FlightMode::Mission {
-            return Err(AerisError::InvalidFlightModeTransition {
-                from: format!("{:?}", self.flight_mode),
-                to: "ReturnHome".to_string(),
-            });
-        }
-
-        self.flight_mode = FlightMode::ReturnHome;
-        Ok(())
-    }
-
-    pub fn land(&mut self) -> Result<(), AerisError> {
-        if self.flight_mode != FlightMode::ReturnHome && self.flight_mode != FlightMode::Hold {
-            return Err(AerisError::InvalidFlightModeTransition {
-                from: format!("{:?}", self.flight_mode),
-                to: "Landing".to_string(),
-            });
-        }
-
-        self.flight_mode = FlightMode::Landing;
-
-        Ok(())
-    }
-
-    pub fn emergency(&mut self) -> Result<(), AerisError> {
-        self.flight_mode = FlightMode::Emergency;
-        Ok(())
     }
 }
