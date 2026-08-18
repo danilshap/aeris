@@ -1,14 +1,15 @@
 use crate::{
-    drone::{Coordinates, Drone, Mission},
+    drone::MissionValidator,
     errors::AerisError,
     loader::{load_drone_catalog, load_mission_config},
-    simulation::Simulation,
+    setup::build_simulation,
 };
 
 mod drone;
 mod errors;
 mod loader;
 mod mission_config;
+mod setup;
 mod simulation;
 
 const DELTA_TIME: f32 = 0.1;
@@ -17,38 +18,9 @@ fn main() -> Result<(), AerisError> {
     let drone_catalog = load_drone_catalog("configs/drones.toml")?;
     let mission_config = load_mission_config("configs/mission.toml")?;
 
-    let mut simulation = Simulation::new();
-    let mut drone_missions = Vec::new();
+    MissionValidator::validate(&mission_config, &drone_catalog)?;
 
-    for group in mission_config.groups {
-        let drone_config = drone_catalog
-            .drones
-            .iter()
-            .find(|config| config.name == group.drone_type)
-            .ok_or_else(|| AerisError::DroneTypeNotFound(group.drone_type.clone()))?;
-
-        for _ in 0..group.count {
-            let coordinates = Coordinates {
-                latitude: 50.4501,
-                longitude: 30.5234,
-            };
-
-            let mut drone = Drone::new(coordinates, 0.0, 0.0, 100., drone_config.clone());
-
-            drone.connect()?;
-            drone.arm()?;
-
-            let mission = Mission::new(mission_config.name.clone(), group.tasks.clone());
-
-            if let Some(task) = mission.current_task() {
-                drone.assign_task(Some(task.clone()));
-            }
-
-            let drone_id = drone.id();
-            simulation.add_drone(drone);
-            drone_missions.push((drone_id, mission));
-        }
-    }
+    let (mut simulation, mut drone_missions) = build_simulation(&mission_config, &drone_catalog)?;
 
     println!("Mission '{}' started", mission_config.name);
 
