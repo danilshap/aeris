@@ -19,7 +19,7 @@ pub struct Coordinates {
 }
 
 #[derive(Debug, PartialEq)]
-enum ConnectionStatus {
+pub enum ConnectionStatus {
     Disconnected,
     Connecting,
     Connected,
@@ -82,6 +82,10 @@ impl Drone {
 
     pub fn flight_mode(&self) -> &FlightMode {
         &self.flight_mode
+    }
+
+    pub fn connection_status(&self) -> &ConnectionStatus {
+        &self.connection_status
     }
 
     pub fn current_task(&self) -> Option<&DroneTask> {

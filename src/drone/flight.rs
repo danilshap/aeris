@@ -1,8 +1,15 @@
-use super::{Drone, FlightMode};
+use super::{ConnectionStatus, Drone, FlightMode};
 use crate::errors::AerisError;
 
 impl Drone {
     pub fn arm(&mut self) -> Result<(), AerisError> {
+        if self.connection_status != ConnectionStatus::Connected {
+            return Err(AerisError::UnexeptbleState {
+                action: "arm".to_string(),
+                state: format!("{:?}", self.connection_status),
+            });
+        }
+
         if self.flight_mode != FlightMode::Idle {
             return Err(AerisError::InvalidFlightModeTransition {
                 from: format!("{:?}", self.flight_mode),
@@ -112,6 +119,7 @@ mod tests {
     fn normal_flight_reaches_landing_mode() {
         let mut drone = drone();
 
+        drone.connect().unwrap();
         drone.arm().unwrap();
         assert_eq!(drone.flight_mode(), &FlightMode::Armed);
 
@@ -146,8 +154,23 @@ mod tests {
     }
 
     #[test]
+    fn arm_requires_connection() {
+        let mut drone = drone();
+
+        let result = drone.arm();
+
+        assert!(matches!(
+            result,
+            Err(AerisError::UnexeptbleState { action, state })
+                if action == "arm" && state == "Disconnected"
+        ));
+        assert_eq!(drone.flight_mode(), &FlightMode::Idle);
+    }
+
+    #[test]
     fn emergency_changes_current_mode() {
         let mut drone = drone();
+        drone.connect().unwrap();
         drone.arm().unwrap();
 
         drone.emergency().unwrap();

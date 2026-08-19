@@ -35,8 +35,9 @@ fn main() -> Result<(), AerisError> {
 
         for drone in simulation.drones() {
             println!(
-                "  {} | alt: {:>5.1}m | mode: {:?} | task: {:?}",
+                "  {} | connection: {:?} | alt: {:>5.1}m | mode: {:?} | task: {:?}",
                 drone.id(),
+                drone.connection_status(),
                 drone.altitude(),
                 drone.flight_mode(),
                 drone.current_task(),

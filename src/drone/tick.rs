@@ -104,6 +104,7 @@ mod tests {
     #[test]
     fn takeoff_reaches_target_and_holds() {
         let mut drone = drone_at(0.0);
+        drone.connect().unwrap();
         drone.arm().unwrap();
         drone.assign_task(Some(DroneTask::Takeoff {
             target_altitude: 10.0,
@@ -119,6 +120,7 @@ mod tests {
     #[test]
     fn return_home_changes_mode_and_clears_task() {
         let mut drone = drone_at(10.0);
+        drone.connect().unwrap();
         drone.arm().unwrap();
         drone.takeoff().unwrap();
         drone.hold().unwrap();
@@ -133,6 +135,7 @@ mod tests {
     #[test]
     fn landing_reaches_ground_and_becomes_idle() {
         let mut drone = drone_at(10.0);
+        drone.connect().unwrap();
         drone.arm().unwrap();
         drone.takeoff().unwrap();
         drone.hold().unwrap();
