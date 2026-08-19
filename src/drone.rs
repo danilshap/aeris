@@ -4,6 +4,7 @@ mod mission;
 mod mission_validator;
 mod tick;
 
+use crate::coordinates::Coordinates;
 use crate::errors::AerisError;
 use uuid::Uuid;
 
@@ -11,12 +12,6 @@ pub use config::DroneConfig;
 pub use mission::DroneTask;
 pub use mission::Mission;
 pub use mission_validator::MissionValidator;
-
-#[derive(Debug)]
-pub struct Coordinates {
-    pub latitude: f64,
-    pub longitude: f64,
-}
 
 #[derive(Debug, PartialEq)]
 pub enum ConnectionStatus {
@@ -33,7 +28,7 @@ pub enum FlightMode {
     Takeoff,
     Hold,
     Mission,
-    ReturnHome,
+    ReturnToHome,
     Landing,
     Emergency,
 }
@@ -42,9 +37,10 @@ pub enum FlightMode {
 pub struct Drone {
     id: Uuid,
     coordinates: Coordinates,
+    home_position: Coordinates,
     altitude: f32,
     speed: f32,
-    battery: f32,
+    battery_charge: f32,
     connection_status: ConnectionStatus,
     flight_mode: FlightMode,
     config: DroneConfig,
@@ -52,19 +48,14 @@ pub struct Drone {
 }
 
 impl Drone {
-    pub fn new(
-        coordinates: Coordinates,
-        altitude: f32,
-        speed: f32,
-        battery: f32,
-        config: DroneConfig,
-    ) -> Self {
+    pub fn new(home_position: Coordinates, altitude: f32, speed: f32, config: DroneConfig) -> Self {
         Self {
             id: Uuid::new_v4(),
-            coordinates,
+            coordinates: home_position,
+            home_position,
             altitude,
             speed,
-            battery,
+            battery_charge: config.battery_capacity,
             connection_status: ConnectionStatus::Disconnected,
             flight_mode: FlightMode::Idle,
             config,
@@ -80,6 +71,18 @@ impl Drone {
         self.altitude
     }
 
+    pub fn speed(&self) -> f32 {
+        self.speed
+    }
+
+    pub fn coordinates(&self) -> &Coordinates {
+        &self.coordinates
+    }
+
+    pub fn home_position(&self) -> &Coordinates {
+        &self.home_position
+    }
+
     pub fn flight_mode(&self) -> &FlightMode {
         &self.flight_mode
     }
@@ -90,6 +93,16 @@ impl Drone {
 
     pub fn current_task(&self) -> Option<&DroneTask> {
         self.current_task.as_ref()
+    }
+
+    pub fn battery_charge(&self) -> f32 {
+        self.battery_charge
+    }
+
+    pub fn battery_percentage(&self) -> f32 {
+        let percentage = self.battery_charge / self.config.battery_capacity * 100.0;
+
+        percentage.clamp(0.0, 100.0)
     }
 
     pub fn connect(&mut self) -> Result<(), AerisError> {

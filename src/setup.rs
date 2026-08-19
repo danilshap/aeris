@@ -1,13 +1,10 @@
 use crate::{
-    drone::{Coordinates, Drone, Mission},
+    drone::{Drone, Mission},
     errors::AerisError,
     mission_config::{DroneCatalog, MissionConfig},
     simulation::Simulation,
 };
 use uuid::Uuid;
-
-const BASE_LATITUDE: f64 = 50.4501;
-const BASE_LONGITUDE: f64 = 30.5234;
 
 pub fn build_simulation(
     mission_config: &MissionConfig,
@@ -24,12 +21,7 @@ pub fn build_simulation(
             .ok_or_else(|| AerisError::DroneTypeNotFound(group.drone_type.clone()))?;
 
         for _ in 0..group.count {
-            let coordinates = Coordinates {
-                latitude: BASE_LATITUDE,
-                longitude: BASE_LONGITUDE,
-            };
-
-            let mut drone = Drone::new(coordinates, 0.0, 0.0, 100.0, drone_config.clone());
+            let mut drone = Drone::new(group.home_position, 0.0, 0.0, drone_config.clone());
 
             drone.connect()?;
             drone.arm()?;

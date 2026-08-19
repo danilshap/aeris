@@ -62,16 +62,16 @@ impl Drone {
         if self.flight_mode != FlightMode::Hold && self.flight_mode != FlightMode::Mission {
             return Err(AerisError::InvalidFlightModeTransition {
                 from: format!("{:?}", self.flight_mode),
-                to: "ReturnHome".to_string(),
+                to: "ReturnToHome".to_string(),
             });
         }
 
-        self.flight_mode = FlightMode::ReturnHome;
+        self.flight_mode = FlightMode::ReturnToHome;
         Ok(())
     }
 
     pub fn land(&mut self) -> Result<(), AerisError> {
-        if self.flight_mode != FlightMode::ReturnHome && self.flight_mode != FlightMode::Hold {
+        if self.flight_mode != FlightMode::ReturnToHome && self.flight_mode != FlightMode::Hold {
             return Err(AerisError::InvalidFlightModeTransition {
                 from: format!("{:?}", self.flight_mode),
                 to: "Landing".to_string(),
@@ -96,13 +96,9 @@ mod tests {
 
     fn drone() -> Drone {
         Drone::new(
-            Coordinates {
-                latitude: 0.0,
-                longitude: 0.0,
-            },
+            Coordinates::new(0.0, 0.0),
             0.0,
             0.0,
-            100.0,
             DroneConfig {
                 name: "test".to_string(),
                 max_speed: 10.0,
@@ -133,7 +129,7 @@ mod tests {
         assert_eq!(drone.flight_mode(), &FlightMode::Mission);
 
         drone.return_home().unwrap();
-        assert_eq!(drone.flight_mode(), &FlightMode::ReturnHome);
+        assert_eq!(drone.flight_mode(), &FlightMode::ReturnToHome);
 
         drone.land().unwrap();
         assert_eq!(drone.flight_mode(), &FlightMode::Landing);

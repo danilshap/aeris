@@ -5,6 +5,7 @@ use crate::{
     setup::build_simulation,
 };
 
+mod coordinates;
 mod drone;
 mod errors;
 mod loader;

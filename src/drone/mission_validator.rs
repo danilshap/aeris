@@ -44,6 +44,22 @@ impl MissionValidator {
                 .find(|drone| drone.name == group.drone_type)
                 .ok_or_else(|| AerisError::DroneTypeNotFound(group.drone_type.clone()))?;
 
+            if !drone_config.battery_capacity.is_finite() || drone_config.battery_capacity <= 0.0 {
+                return Err(AerisError::InvalidMission(format!(
+                    "drone '{}' must have a positive battery capacity",
+                    group.drone_type
+                )));
+            }
+
+            if !drone_config.consumption_per_second.is_finite()
+                || drone_config.consumption_per_second < 0.0
+            {
+                return Err(AerisError::InvalidMission(format!(
+                    "drone '{}' must have non-negative battery consumption",
+                    group.drone_type
+                )));
+            }
+
             let mut mode = FlightMode::Armed;
 
             for (index, task) in group.tasks.iter().enumerate() {
@@ -62,8 +78,29 @@ impl MissionValidator {
                         FlightMode::Hold
                     }
                     (FlightMode::Hold, DroneTask::Hold) => FlightMode::Hold,
-                    (FlightMode::Hold, DroneTask::ReturnHome) => FlightMode::ReturnHome,
-                    (FlightMode::Hold | FlightMode::ReturnHome, DroneTask::Land) => {
+                    (FlightMode::Hold, DroneTask::FlyTo { target }) => {
+                        let latitude = target.latitude();
+                        let longitude = target.longitude();
+
+                        if !latitude.is_finite()
+                            || !longitude.is_finite()
+                            || !(-90.0..=90.0).contains(&latitude)
+                            || !(-180.0..=180.0).contains(&longitude)
+                        {
+                            return Err(AerisError::InvalidMission(format!(
+                                "task {index} has invalid target coordinates ({latitude}, {longitude}) for drone '{}'",
+                                group.drone_type
+                            )));
+                        }
+
+                        if *target == group.home_position {
+                            FlightMode::ReturnToHome
+                        } else {
+                            FlightMode::Hold
+                        }
+                    }
+                    (FlightMode::Hold, DroneTask::ReturnHome) => FlightMode::ReturnToHome,
+                    (FlightMode::Hold | FlightMode::ReturnToHome, DroneTask::Land) => {
                         FlightMode::Idle
                     }
                     _ => {
@@ -86,6 +123,7 @@ impl MissionValidator {
 mod tests {
     use super::*;
     use crate::{
+        coordinates::Coordinates,
         drone::DroneConfig,
         mission_config::{DroneCatalog, MissionGroupConfig},
     };
@@ -110,6 +148,7 @@ mod tests {
             groups: vec![MissionGroupConfig {
                 drone_type: "scout".to_string(),
                 count: 1,
+                home_position: Coordinates::new(50.4501, 30.5234),
                 tasks,
             }],
         }
@@ -121,8 +160,15 @@ mod tests {
             DroneTask::Takeoff {
                 target_altitude: 50.0,
             },
-            DroneTask::Hold,
-            DroneTask::ReturnHome,
+            DroneTask::FlyTo {
+                target: Coordinates::new(50.4510, 30.5240),
+            },
+            DroneTask::FlyTo {
+                target: Coordinates::new(50.4520, 30.5250),
+            },
+            DroneTask::FlyTo {
+                target: Coordinates::new(50.4501, 30.5234),
+            },
             DroneTask::Land,
         ]);
 
@@ -147,6 +193,53 @@ mod tests {
 
         assert!(matches!(
             MissionValidator::validate(&mission, &drone_catalog()),
+            Err(AerisError::InvalidMission(_))
+        ));
+    }
+
+    #[test]
+    fn rejects_invalid_fly_to_coordinates() {
+        let mission = mission(vec![
+            DroneTask::Takeoff {
+                target_altitude: 50.0,
+            },
+            DroneTask::FlyTo {
+                target: Coordinates::new(91.0, 30.5234),
+            },
+        ]);
+
+        assert!(matches!(
+            MissionValidator::validate(&mission, &drone_catalog()),
+            Err(AerisError::InvalidMission(_))
+        ));
+    }
+
+    #[test]
+    fn rejects_non_positive_battery_capacity() {
+        let mut catalog = drone_catalog();
+        catalog.drones[0].battery_capacity = 0.0;
+
+        let mission = mission(vec![DroneTask::Takeoff {
+            target_altitude: 50.0,
+        }]);
+
+        assert!(matches!(
+            MissionValidator::validate(&mission, &catalog),
+            Err(AerisError::InvalidMission(_))
+        ));
+    }
+
+    #[test]
+    fn rejects_negative_battery_consumption() {
+        let mut catalog = drone_catalog();
+        catalog.drones[0].consumption_per_second = -0.1;
+
+        let mission = mission(vec![DroneTask::Takeoff {
+            target_altitude: 50.0,
+        }]);
+
+        assert!(matches!(
+            MissionValidator::validate(&mission, &catalog),
             Err(AerisError::InvalidMission(_))
         ));
     }

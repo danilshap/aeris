@@ -3,13 +3,27 @@ name = "recon-alpha"
 [[groups]]
 drone_type = "scout"
 count = 3
+home_position = { latitude = 50.4501, longitude = 30.5234 }
 
 [[groups.tasks]]
 type = "Takeoff"
 target_altitude = 10.0
 
 [[groups.tasks]]
-type = "ReturnHome"
+type = "FlyTo"
+target = { latitude = 50.4503, longitude = 30.5237 }
+
+[[groups.tasks]]
+type = "FlyTo"
+target = { latitude = 50.4505, longitude = 30.5234 }
+
+[[groups.tasks]]
+type = "FlyTo"
+target = { latitude = 50.4503, longitude = 30.5231 }
+
+[[groups.tasks]]
+type = "FlyTo"
+target = { latitude = 50.4501, longitude = 30.5234 }
 
 [[groups.tasks]]
 type = "Land"
@@ -18,13 +32,27 @@ type = "Land"
 [[groups]]
 drone_type = "recon"
 count = 2
+home_position = { latitude = 50.4501, longitude = 30.5234 }
 
 [[groups.tasks]]
 type = "Takeoff"
 target_altitude = 20.0
 
 [[groups.tasks]]
-type = "ReturnHome"
+type = "FlyTo"
+target = { latitude = 50.4504, longitude = 30.5239 }
+
+[[groups.tasks]]
+type = "FlyTo"
+target = { latitude = 50.4507, longitude = 30.5234 }
+
+[[groups.tasks]]
+type = "FlyTo"
+target = { latitude = 50.4504, longitude = 30.5229 }
+
+[[groups.tasks]]
+type = "FlyTo"
+target = { latitude = 50.4501, longitude = 30.5234 }
 
 [[groups.tasks]]
 type = "Land"
