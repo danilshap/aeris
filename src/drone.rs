@@ -1,17 +1,13 @@
 mod config;
 mod flight;
-mod mission;
-mod mission_validator;
 mod tick;
 
 use crate::coordinates::Coordinates;
 use crate::errors::AerisError;
+use crate::mission::DroneTask;
 use uuid::Uuid;
 
 pub use config::DroneConfig;
-pub use mission::DroneTask;
-pub use mission::Mission;
-pub use mission_validator::MissionValidator;
 
 #[derive(Debug, PartialEq)]
 pub enum ConnectionStatus {

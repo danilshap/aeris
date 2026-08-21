@@ -1,17 +1,17 @@
 use crate::{
-    drone::{Drone, Mission},
+    drone::Drone,
     errors::AerisError,
+    mission::{Mission, MissionDrone},
     mission_config::{DroneCatalog, MissionConfig},
     simulation::Simulation,
 };
-use uuid::Uuid;
 
 pub fn build_simulation(
     mission_config: &MissionConfig,
     drone_catalog: &DroneCatalog,
-) -> Result<(Simulation, Vec<(Uuid, Mission)>), AerisError> {
+) -> Result<Simulation, AerisError> {
     let mut simulation = Simulation::new();
-    let mut drone_missions = Vec::new();
+    let mut mission_drones = Vec::new();
 
     for group in &mission_config.groups {
         let drone_config = drone_catalog
@@ -26,17 +26,13 @@ pub fn build_simulation(
             drone.connect()?;
             drone.arm()?;
 
-            let mission = Mission::new(mission_config.name.clone(), group.tasks.clone());
-
-            if let Some(task) = mission.current_task() {
-                drone.assign_task(Some(task.clone()));
-            }
-
-            let drone_id = drone.id();
-            simulation.add_drone(drone);
-            drone_missions.push((drone_id, mission));
+            mission_drones.push(MissionDrone::new(drone, group.tasks.clone()));
         }
     }
 
-    Ok((simulation, drone_missions))
+    let mut mission = Mission::new(mission_config.name.clone(), mission_drones);
+    mission.start()?;
+    simulation.add_mission(mission);
+
+    Ok(simulation)
 }

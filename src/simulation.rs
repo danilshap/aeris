@@ -1,72 +1,74 @@
 use crate::{
-    drone::{Drone, DroneTask, Mission},
+    drone::Drone,
     errors::AerisError,
+    mission::{Mission, MissionState},
 };
-use uuid::Uuid;
 
 #[derive(Debug)]
 pub struct Simulation {
-    drones: Vec<Drone>,
+    missions: Vec<Mission>,
 }
 
 impl Simulation {
     pub fn new() -> Self {
-        Self { drones: vec![] }
+        Self { missions: vec![] }
     }
 
-    pub fn drones(&self) -> &[Drone] {
-        &self.drones
+    pub fn add_mission(&mut self, mission: Mission) {
+        self.missions.push(mission);
     }
 
-    pub fn add_drone(&mut self, drone: Drone) {
-        self.drones.push(drone);
+    pub fn drones(&self) -> impl Iterator<Item = &Drone> {
+        self.missions.iter().flat_map(Mission::drones)
     }
 
-    pub fn drone(&self, drone_id: Uuid) -> Option<&Drone> {
-        return self.drones.iter().find(|drone| drone.id() == drone_id);
+    pub fn drone(&self, index: usize) -> Option<&Drone> {
+        self.drones().nth(index)
     }
 
-    pub fn assign_task(&mut self, drone_id: Uuid, task: DroneTask) -> Result<(), AerisError> {
-        let drone = self
-            .drones
-            .iter_mut()
-            .find(|drone| drone.id() == drone_id)
-            .ok_or(AerisError::DroneNotFound)?;
+    pub fn drone_count(&self) -> usize {
+        self.missions.iter().map(Mission::drone_count).sum()
+    }
 
-        drone.assign_task(Some(task));
-
-        Ok(())
+    pub fn mission_name(&self) -> Option<&str> {
+        self.missions.first().map(Mission::name)
     }
 
     pub fn tick(&mut self, delta_time: f32) -> Result<(), AerisError> {
-        for drone in self.drones.iter_mut() {
-            drone.tick(delta_time)?;
+        for mission in &mut self.missions {
+            mission.tick(delta_time)?;
         }
 
         Ok(())
     }
 
-    pub fn update_mission(
-        &mut self,
-        drone_id: Uuid,
-        mission: &mut Mission,
-    ) -> Result<(), AerisError> {
-        let task_finished = self
-            .drone(drone_id)
-            .ok_or(AerisError::DroneNotFound)?
-            .current_task()
-            .is_none();
-
-        if !task_finished || mission.is_finished() {
-            return Ok(());
-        }
-
-        mission.next_task();
-
-        if let Some(task) = mission.current_task() {
-            self.assign_task(drone_id, task.clone())?
+    pub fn pause(&mut self) -> Result<(), AerisError> {
+        for mission in &mut self.missions {
+            if !mission.is_finished() {
+                mission.pause()?;
+            }
         }
 
         Ok(())
+    }
+
+    pub fn resume(&mut self) -> Result<(), AerisError> {
+        for mission in &mut self.missions {
+            if !mission.is_finished() {
+                mission.resume()?;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn is_paused(&self) -> bool {
+        self.missions
+            .iter()
+            .any(|mission| mission.state() == &MissionState::Paused)
+    }
+
+    pub fn is_finished(&self) -> bool {
+        !self.missions.is_empty() && self.missions.iter().all(Mission::is_finished)
     }
 }

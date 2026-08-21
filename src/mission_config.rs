@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 use crate::coordinates::Coordinates;
 use crate::drone::DroneConfig;
-use crate::drone::DroneTask;
+use crate::mission::DroneTask;
 
 #[derive(Debug, Deserialize)]
 pub struct MissionConfig {

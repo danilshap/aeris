@@ -5,16 +5,10 @@ use ratatui::{
 };
 
 use crate::{
-    coordinates::Coordinates, drone::DroneTask, mission_config::MissionConfig,
-    simulation::Simulation, ui::UiState,
+    app::App, coordinates::Coordinates, mission::DroneTask, simulation::Simulation, ui::UiState,
 };
 
-pub fn draw(
-    frame: &mut Frame,
-    simulation: &Simulation,
-    mission_config: &MissionConfig,
-    ui_state: &mut UiState,
-) {
+pub fn draw(frame: &mut Frame, app: &mut App) {
     let layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -31,11 +25,12 @@ pub fn draw(
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(layout[2]);
 
-    draw_header(frame, layout[0], simulation, mission_config, ui_state);
+    draw_header(frame, layout[0], app);
 
+    let (simulation, ui_state) = app.fleet_state();
     draw_fleet(frame, layout[1], simulation, ui_state);
 
-    draw_drone_details(frame, details_layout[0], simulation, ui_state);
+    draw_drone_details(frame, details_layout[0], app.simulation(), app.ui_state());
 
     draw_mission(frame, details_layout[1]);
 
@@ -44,26 +39,26 @@ pub fn draw(
     draw_footer(frame, layout[4]);
 }
 
-// ---------------------------------------------------------
-// Header
-// ---------------------------------------------------------
-
-fn draw_header(
-    frame: &mut Frame,
-    area: Rect,
-    simulation: &Simulation,
-    mission_config: &MissionConfig,
-    ui_state: &UiState,
-) {
-    let selected = ui_state
+fn draw_header(frame: &mut Frame, area: Rect, app: &App) {
+    let selected = app
+        .ui_state()
         .selected_drone()
         .map(|index| format!("#{}", index + 1))
         .unwrap_or_else(|| "-".to_string());
 
+    let status = if app.is_finished() {
+        "FINISHED"
+    } else if app.is_paused() {
+        "PAUSED"
+    } else {
+        "RUNNING"
+    };
+
     let text = format!(
-        "Mission: {}    Status: RUNNING    Drones: {}    Selected: {}",
-        mission_config.name,
-        simulation.drones().len(),
+        "Mission: {}    Status: {}    Drones: {}    Selected: {}",
+        app.mission_name().unwrap_or("-"),
+        status,
+        app.simulation().drone_count(),
         selected,
     );
 
@@ -76,7 +71,6 @@ fn draw_header(
 fn draw_fleet(frame: &mut Frame, area: Rect, simulation: &Simulation, ui_state: &mut UiState) {
     let items = simulation
         .drones()
-        .iter()
         .map(|drone| {
             let progress = match drone.current_task() {
                 Some(DroneTask::FlyTo { target }) => calculate_flight_progress(
@@ -110,7 +104,7 @@ fn draw_fleet(frame: &mut Frame, area: Rect, simulation: &Simulation, ui_state: 
         })
         .collect::<Vec<_>>();
 
-    let total = items.len();
+    let total = simulation.drone_count();
 
     let selected = ui_state
         .selected_drone()
@@ -196,7 +190,7 @@ fn draw_drone_details(frame: &mut Frame, area: Rect, simulation: &Simulation, ui
         return;
     };
 
-    let Some(drone) = simulation.drones().get(index) else {
+    let Some(drone) = simulation.drone(index) else {
         draw_empty_drone(frame, area);
         return;
     };
@@ -231,7 +225,6 @@ fn draw_empty_drone(frame: &mut Frame, area: Rect) {
 }
 
 fn draw_mission(frame: &mut Frame, area: Rect) {
-
     let text = "\
 Current step    FlyTo
 
@@ -248,7 +241,6 @@ Current step    FlyTo
 }
 
 fn draw_logs(frame: &mut Frame, area: Rect) {
-
     let text = "\
 00:01:42  DR-012  Flying to waypoint
 00:01:41  DR-008  Reached altitude

@@ -1,7 +1,8 @@
-use super::{ConnectionStatus, Drone, DroneTask, FlightMode};
+use super::{ConnectionStatus, Drone, FlightMode};
 use crate::{
     coordinates::{Coordinates, METERS_PER_LATITUDE_DEGREE},
     errors::AerisError,
+    mission::DroneTask,
 };
 
 impl Drone {

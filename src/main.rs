@@ -1,18 +1,21 @@
 use std::time::{Duration, Instant};
 
-use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use crossterm::event::{self, Event, KeyEventKind};
 
 use crate::{
-    drone::MissionValidator,
+    app::App,
     errors::AerisError,
     loader::{load_drone_catalog, load_mission_config},
+    mission::MissionValidator,
     setup::build_simulation,
 };
 
+mod app;
 mod coordinates;
 mod drone;
 mod errors;
 mod loader;
+mod mission;
 mod mission_config;
 mod setup;
 mod simulation;
@@ -27,15 +30,17 @@ fn main() -> Result<(), AerisError> {
 
     MissionValidator::validate(&mission_config, &drone_catalog)?;
 
-    let (mut simulation, mut drone_missions) = build_simulation(&mission_config, &drone_catalog)?;
+    let simulation = build_simulation(&mission_config, &drone_catalog)?;
+
+    let ui_state = ui::UiState::new();
+
+    let mut app = App::new(simulation, ui_state);
 
     ratatui::run(|terminal| {
-        let mut ui_state = ui::UiState::new();
         let mut last_tick = Instant::now();
-        let mut mission_finished = false;
 
-        while !mission_finished {
-            terminal.draw(|frame| ui::draw(frame, &simulation, &mission_config, &mut ui_state))?;
+        while !app.should_quit() {
+            terminal.draw(|frame| ui::draw(frame, &mut app))?;
 
             let timeout = TICK_RATE.saturating_sub(last_tick.elapsed());
 
@@ -43,29 +48,16 @@ fn main() -> Result<(), AerisError> {
                 && let Event::Key(key) = event::read()?
                 && key.kind == KeyEventKind::Press
             {
-                match key.code {
-                    KeyCode::Char('q') => return Ok(()),
-                    KeyCode::Up => ui_state.previous_drone(),
-                    KeyCode::Down => ui_state.next_drone(simulation.drones().len()),
-                    _ => {}
-                }
+                app.handle_key(key.code)?;
             }
 
             if last_tick.elapsed() >= TICK_RATE {
-                simulation.tick(DELTA_TIME)?;
-
-                for (drone_id, mission) in &mut drone_missions {
-                    simulation.update_mission(*drone_id, mission)?;
-                }
-
-                mission_finished = drone_missions
-                    .iter()
-                    .all(|(_, mission)| mission.is_finished());
+                app.tick(DELTA_TIME)?;
                 last_tick = Instant::now();
             }
         }
 
-        terminal.draw(|frame| ui::draw(frame, &simulation, &mission_config, &mut ui_state))?;
+        terminal.draw(|frame| ui::draw(frame, &mut app))?;
         Ok(())
     })
 }

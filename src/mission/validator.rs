@@ -1,6 +1,7 @@
-use super::{DroneTask, FlightMode};
 use crate::{
+    drone::FlightMode,
     errors::AerisError,
+    mission::DroneTask,
     mission_config::{DroneCatalog, MissionConfig},
 };
 
