@@ -32,6 +32,7 @@ pub enum FlightMode {
 #[derive(Debug)]
 pub struct Drone {
     id: Uuid,
+    name: String,
     coordinates: Coordinates,
     home_position: Coordinates,
     flight_start_position: Coordinates,
@@ -45,9 +46,16 @@ pub struct Drone {
 }
 
 impl Drone {
-    pub fn new(home_position: Coordinates, altitude: f32, speed: f32, config: DroneConfig) -> Self {
+    pub fn new(
+        name: String,
+        home_position: Coordinates,
+        altitude: f32,
+        speed: f32,
+        config: DroneConfig,
+    ) -> Self {
         Self {
             id: Uuid::new_v4(),
+            name,
             coordinates: home_position,
             home_position,
             flight_start_position: home_position,
@@ -63,6 +71,10 @@ impl Drone {
 
     pub fn id(&self) -> Uuid {
         self.id
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     pub fn altitude(&self) -> f32 {

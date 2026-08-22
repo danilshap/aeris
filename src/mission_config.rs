@@ -13,7 +13,7 @@ pub struct MissionConfig {
 #[derive(Debug, Deserialize)]
 pub struct MissionGroupConfig {
     pub drone_type: String,
-    pub count: usize,
+    pub drone_names: Vec<String>,
     pub home_position: Coordinates,
     pub tasks: Vec<DroneTask>,
 }

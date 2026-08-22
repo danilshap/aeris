@@ -135,6 +135,7 @@ mod tests {
 
     fn drone_at(altitude: f32) -> Drone {
         Drone::new(
+            "DR-TEST-01".to_string(),
             Coordinates::new(0.0, 0.0),
             altitude,
             0.0,

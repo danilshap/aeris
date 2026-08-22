@@ -50,6 +50,14 @@ impl MissionDrone {
         &self.drone
     }
 
+    pub fn tasks(&self) -> &[DroneTask] {
+        &self.tasks
+    }
+
+    pub fn current_task_index(&self) -> usize {
+        self.current_task_index
+    }
+
     fn tick(&mut self, delta_time: f32) -> Result<(), AerisError> {
         self.drone.tick(delta_time)?;
 
@@ -71,6 +79,18 @@ impl MissionDrone {
             && self.current_task_index + 1 == self.tasks.len()
             && self.drone.current_task().is_none()
             && self.drone.flight_mode() == &FlightMode::Idle
+    }
+
+    fn progress(&self) -> f64 {
+        if self.tasks.is_empty() {
+            return 0.0;
+        }
+
+        if self.is_finished() {
+            return 1.0;
+        }
+
+        self.current_task_index as f64 / self.tasks.len() as f64
     }
 }
 
@@ -102,8 +122,20 @@ impl Mission {
         self.drones.iter().map(MissionDrone::drone)
     }
 
+    pub fn mission_drones(&self) -> impl Iterator<Item = &MissionDrone> {
+        self.drones.iter()
+    }
+
     pub fn drone_count(&self) -> usize {
         self.drones.len()
+    }
+
+    pub fn progress(&self) -> f64 {
+        if self.drones.is_empty() {
+            return 0.0;
+        }
+
+        self.drones.iter().map(MissionDrone::progress).sum::<f64>() / self.drones.len() as f64
     }
 
     pub fn start(&mut self) -> Result<(), AerisError> {
@@ -172,6 +204,7 @@ mod tests {
 
     fn mission_drone(climb_speed: f32, descent_speed: f32) -> MissionDrone {
         let mut drone = Drone::new(
+            "DR-TEST-01".to_string(),
             Coordinates::new(0.0, 0.0),
             0.0,
             0.0,
@@ -206,6 +239,7 @@ mod tests {
             "test".to_string(),
             vec![mission_drone(1.0, 1.0), mission_drone(0.5, 0.5)],
         );
+        assert_eq!(mission.progress(), 0.0);
         mission.start().unwrap();
 
         mission.tick(1.0).unwrap();
@@ -217,6 +251,7 @@ mod tests {
         mission.tick(1.0).unwrap();
 
         assert!(mission.is_finished());
+        assert_eq!(mission.progress(), 1.0);
         assert!(
             mission
                 .drones()

@@ -25,7 +25,7 @@ impl MissionValidator {
         }
 
         for group in &mission.groups {
-            if group.count == 0 {
+            if group.drone_names.is_empty() {
                 return Err(AerisError::InvalidMission(format!(
                     "group '{}' must contain at least one drone",
                     group.drone_type
@@ -148,7 +148,7 @@ mod tests {
             name: "test".to_string(),
             groups: vec![MissionGroupConfig {
                 drone_type: "scout".to_string(),
-                count: 1,
+                drone_names: vec!["DR-SCO-01".to_string()],
                 home_position: Coordinates::new(50.4501, 30.5234),
                 tasks,
             }],

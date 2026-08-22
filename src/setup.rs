@@ -20,8 +20,14 @@ pub fn build_simulation(
             .find(|config| config.name == group.drone_type)
             .ok_or_else(|| AerisError::DroneTypeNotFound(group.drone_type.clone()))?;
 
-        for _ in 0..group.count {
-            let mut drone = Drone::new(group.home_position, 0.0, 0.0, drone_config.clone());
+        for name in &group.drone_names {
+            let mut drone = Drone::new(
+                name.clone(),
+                group.home_position,
+                0.0,
+                0.0,
+                drone_config.clone(),
+            );
 
             drone.connect()?;
             drone.arm()?;

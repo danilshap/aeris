@@ -2,7 +2,7 @@ name = "recon-alpha"
 
 [[groups]]
 drone_type = "scout"
-count = 3
+drone_names = ["DR-SCO-01", "DR-SCO-02", "DR-SCO-03"]
 home_position = { latitude = 50.4501, longitude = 30.5234 }
 
 [[groups.tasks]]
@@ -31,7 +31,7 @@ type = "Land"
 
 [[groups]]
 drone_type = "recon"
-count = 2
+drone_names = ["DR-REC-01", "DR-REC-02"]
 home_position = { latitude = 50.4501, longitude = 30.5234 }
 
 [[groups.tasks]]

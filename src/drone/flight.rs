@@ -96,6 +96,7 @@ mod tests {
 
     fn drone() -> Drone {
         Drone::new(
+            "DR-TEST-01".to_string(),
             Coordinates::new(0.0, 0.0),
             0.0,
             0.0,

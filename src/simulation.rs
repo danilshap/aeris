@@ -1,7 +1,7 @@
 use crate::{
     drone::Drone,
     errors::AerisError,
-    mission::{Mission, MissionState},
+    mission::{Mission, MissionDrone, MissionState},
 };
 
 #[derive(Debug)]
@@ -26,12 +26,27 @@ impl Simulation {
         self.drones().nth(index)
     }
 
+    pub fn mission_drone(&self, index: usize) -> Option<&MissionDrone> {
+        self.missions
+            .iter()
+            .flat_map(Mission::mission_drones)
+            .nth(index)
+    }
+
     pub fn drone_count(&self) -> usize {
         self.missions.iter().map(Mission::drone_count).sum()
     }
 
     pub fn mission_name(&self) -> Option<&str> {
         self.missions.first().map(Mission::name)
+    }
+
+    pub fn mission_progress(&self) -> f64 {
+        if self.missions.is_empty() {
+            return 0.0;
+        }
+
+        self.missions.iter().map(Mission::progress).sum::<f64>() / self.missions.len() as f64
     }
 
     pub fn tick(&mut self, delta_time: f32) -> Result<(), AerisError> {
