@@ -20,7 +20,7 @@ pub enum DroneTask {
     Land,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum MissionState {
     Ready,
     Running,
@@ -28,7 +28,7 @@ pub enum MissionState {
     Finished,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MissionDrone {
     drone: Drone,
     tasks: Vec<DroneTask>,
@@ -94,7 +94,7 @@ impl MissionDrone {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Mission {
     name: String,
     state: MissionState,

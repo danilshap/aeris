@@ -4,7 +4,7 @@ use crate::{
     mission::{Mission, MissionDrone, MissionState},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Simulation {
     missions: Vec<Mission>,
 }

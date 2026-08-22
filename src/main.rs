@@ -1,9 +1,10 @@
-use std::time::{Duration, Instant};
+use std::{sync::mpsc, time::Duration};
 
 use crossterm::event::{self, Event, KeyEventKind};
 
 use crate::{
     app::App,
+    commands::{SimulationCommand, SimulationEvent, spawn_simulation_worker},
     errors::AerisError,
     loader::{load_drone_catalog, load_mission_config},
     mission::MissionValidator,
@@ -11,6 +12,7 @@ use crate::{
 };
 
 mod app;
+mod commands;
 mod coordinates;
 mod drone;
 mod errors;
@@ -31,33 +33,44 @@ fn main() -> Result<(), AerisError> {
     MissionValidator::validate(&mission_config, &drone_catalog)?;
 
     let simulation = build_simulation(&mission_config, &drone_catalog)?;
+    let initial_snapshot = simulation.clone();
+
+    let (command_sender, command_receiver) = mpsc::channel::<SimulationCommand>();
+    let (event_sender, event_receiver) = mpsc::channel::<SimulationEvent>();
+
+    let worker = spawn_simulation_worker(
+        simulation,
+        command_receiver,
+        event_sender,
+        TICK_RATE,
+        DELTA_TIME,
+    );
 
     let ui_state = ui::UiState::new();
 
-    let mut app = App::new(simulation, ui_state);
+    let mut app = App::new(initial_snapshot, ui_state, command_sender, event_receiver);
 
-    ratatui::run(|terminal| {
-        let mut last_tick = Instant::now();
-
+    let ui_result = ratatui::run(|terminal| {
         while !app.should_quit() {
+            app.receive_simulation_events();
+
             terminal.draw(|frame| ui::draw(frame, &mut app))?;
 
-            let timeout = TICK_RATE.saturating_sub(last_tick.elapsed());
-
-            if event::poll(timeout)?
+            if event::poll(TICK_RATE)?
                 && let Event::Key(key) = event::read()?
                 && key.kind == KeyEventKind::Press
             {
                 app.handle_key(key.code)?;
             }
-
-            if last_tick.elapsed() >= TICK_RATE {
-                app.tick(DELTA_TIME)?;
-                last_tick = Instant::now();
-            }
         }
 
         terminal.draw(|frame| ui::draw(frame, &mut app))?;
         Ok(())
-    })
+    });
+
+    drop(app);
+
+    worker.join().expect("simulation worker panicked");
+
+    ui_result
 }

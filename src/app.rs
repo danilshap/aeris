@@ -1,19 +1,37 @@
+use std::sync::mpsc::{Receiver, Sender};
+
 use crossterm::event::KeyCode;
 
-use crate::{errors::AerisError, simulation::Simulation, ui::UiState};
+use crate::{
+    commands::{SimulationCommand, SimulationEvent},
+    errors::AerisError,
+    simulation::Simulation,
+    ui::UiState,
+};
 
 pub struct App {
     simulation: Simulation,
     ui_state: UiState,
+    commands: Sender<SimulationCommand>,
+    events: Receiver<SimulationEvent>,
     should_quit: bool,
+    failure: Option<String>,
 }
 
 impl App {
-    pub fn new(simulation: Simulation, ui_state: UiState) -> Self {
+    pub fn new(
+        simulation: Simulation,
+        ui_state: UiState,
+        commands: Sender<SimulationCommand>,
+        events: Receiver<SimulationEvent>,
+    ) -> Self {
         Self {
             simulation,
             ui_state,
+            commands,
+            events,
             should_quit: false,
+            failure: None,
         }
     }
 
@@ -45,14 +63,17 @@ impl App {
         self.simulation.is_finished()
     }
 
-    pub fn tick(&mut self, delta_time: f32) -> Result<(), AerisError> {
-        self.simulation.tick(delta_time)?;
-
-        if self.simulation.is_finished() {
-            self.should_quit = true;
+    pub fn receive_simulation_events(&mut self) {
+        while let Ok(event) = self.events.try_recv() {
+            match event {
+                SimulationEvent::Snapshot(simulation) => self.simulation = simulation,
+                SimulationEvent::Finished => self.should_quit = true,
+                SimulationEvent::Failed(error) => {
+                    self.failure = Some(error);
+                    self.should_quit = true;
+                }
+            }
         }
-
-        Ok(())
     }
 
     pub fn previous_drone(&mut self) {
@@ -65,9 +86,16 @@ impl App {
 
     pub fn handle_key(&mut self, code: KeyCode) -> Result<(), AerisError> {
         match code {
-            KeyCode::Char('q') => self.should_quit = true,
-            KeyCode::Char(' ') if self.is_paused() => self.simulation.resume()?,
-            KeyCode::Char(' ') => self.simulation.pause()?,
+            KeyCode::Char('q') => {
+                let _ = self.commands.send(SimulationCommand::Shutdown);
+                self.should_quit = true;
+            }
+            KeyCode::Char(' ') if self.is_paused() => {
+                let _ = self.commands.send(SimulationCommand::Resume);
+            }
+            KeyCode::Char(' ') => {
+                let _ = self.commands.send(SimulationCommand::Pause);
+            }
             KeyCode::Up => self.previous_drone(),
             KeyCode::Down => self.next_drone(),
             _ => {}

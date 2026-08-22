@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 pub use config::DroneConfig;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ConnectionStatus {
     Disconnected,
     Connecting,
@@ -17,7 +17,7 @@ pub enum ConnectionStatus {
     Lost,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum FlightMode {
     Idle,
     Armed,
@@ -28,7 +28,7 @@ pub enum FlightMode {
     Landing,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Drone {
     id: Uuid,
     name: String,
