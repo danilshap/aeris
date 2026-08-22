@@ -26,7 +26,6 @@ pub enum FlightMode {
     Mission,
     ReturnToHome,
     Landing,
-    Emergency,
 }
 
 #[derive(Debug)]
@@ -109,10 +108,6 @@ impl Drone {
         self.current_task.as_ref()
     }
 
-    pub fn battery_charge(&self) -> f32 {
-        self.battery_charge
-    }
-
     pub fn battery_percentage(&self) -> f32 {
         let percentage = self.battery_charge / self.config.battery_capacity * 100.0;
 
@@ -130,17 +125,6 @@ impl Drone {
                 self.connection_status = ConnectionStatus::Connecting;
                 // todo: timer for connection
                 self.connection_status = ConnectionStatus::Connected;
-                Ok(())
-            }
-        }
-    }
-
-    pub fn disconnect(&mut self) -> Result<(), AerisError> {
-        match self.connection_status {
-            ConnectionStatus::Disconnected => Ok(()),
-            _ => {
-                // todo: timer for disconnection
-                self.connection_status = ConnectionStatus::Disconnected;
                 Ok(())
             }
         }

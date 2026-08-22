@@ -208,7 +208,6 @@ fn signal_bar(status: &ConnectionStatus) -> &'static str {
 
 fn phase_color(mode: &FlightMode) -> Color {
     match mode {
-        FlightMode::Emergency => Color::Red,
         FlightMode::Landing | FlightMode::ReturnToHome => Color::Yellow,
         FlightMode::Idle => MUTED,
         _ => ACCENT,

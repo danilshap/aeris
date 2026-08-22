@@ -82,11 +82,6 @@ impl Drone {
 
         Ok(())
     }
-
-    pub fn emergency(&mut self) -> Result<(), AerisError> {
-        self.flight_mode = FlightMode::Emergency;
-        Ok(())
-    }
 }
 
 #[cfg(test)]
@@ -162,16 +157,5 @@ mod tests {
                 if action == "arm" && state == "Disconnected"
         ));
         assert_eq!(drone.flight_mode(), &FlightMode::Idle);
-    }
-
-    #[test]
-    fn emergency_changes_current_mode() {
-        let mut drone = drone();
-        drone.connect().unwrap();
-        drone.arm().unwrap();
-
-        drone.emergency().unwrap();
-
-        assert_eq!(drone.flight_mode(), &FlightMode::Emergency);
     }
 }

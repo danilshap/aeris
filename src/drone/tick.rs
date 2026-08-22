@@ -227,7 +227,6 @@ mod tests {
         drone.tick(3.0).unwrap();
         drone.tick(2.0).unwrap();
 
-        assert_eq!(drone.battery_charge(), 90.0);
         assert_eq!(drone.battery_percentage(), 90.0);
     }
 
@@ -240,7 +239,7 @@ mod tests {
 
         drone.tick(2.0).unwrap();
 
-        assert_eq!(drone.battery_charge(), 0.0);
+        assert_eq!(drone.battery_percentage(), 0.0);
         assert_eq!(drone.speed(), 0.0);
         assert_eq!(drone.connection_status(), &ConnectionStatus::Lost);
         assert!(drone.current_task().is_none());
