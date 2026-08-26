@@ -9,9 +9,8 @@ use ratatui::{
 use crate::{
     app::App,
     coordinates::Coordinates,
-    drone::{ConnectionStatus, Drone, FlightMode},
-    mission::DroneTask,
-    simulation::Simulation,
+    drone::{ConnectionStatus, DroneSnapshot, DroneTask, FlightMode},
+    simulation::FleetSnapshot,
     ui::UiState,
 };
 
@@ -20,7 +19,7 @@ const HOT: Color = Color::LightMagenta;
 const MUTED: Color = Color::DarkGray;
 
 pub fn draw(frame: &mut Frame, app: &mut App) {
-    let fleet_height = app.simulation().drone_count() as u16 + 3;
+    let fleet_height = app.simulation().drones.len() as u16 + 3;
     let layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -59,8 +58,8 @@ fn draw_header(frame: &mut Frame, area: Rect, app: &App) {
     let selected = app
         .ui_state()
         .selected_drone()
-        .and_then(|index| app.simulation().drone(index))
-        .map(Drone::name)
+        .and_then(|index| app.simulation().drones.get(index))
+        .map(|mission_drone| mission_drone.drone.name.as_str())
         .unwrap_or("-");
 
     let text = Line::from(vec![
@@ -71,7 +70,7 @@ fn draw_header(frame: &mut Frame, area: Rect, app: &App) {
         format!("▶ {status}").fg(status_color).bold(),
         Span::raw(format!(
             "    {} UNITS    SELECTED {selected}",
-            app.simulation().drone_count()
+            app.simulation().drones.len()
         )),
     ]);
 
@@ -82,7 +81,7 @@ fn draw_header(frame: &mut Frame, area: Rect, app: &App) {
 }
 
 fn draw_mission_progress(frame: &mut Frame, area: Rect, app: &App) {
-    let progress = app.simulation().mission_progress();
+    let progress = app.simulation().progress;
     let label = format!("{:>3.0}%", progress * 100.0);
 
     let gauge = Gauge::default()
@@ -99,11 +98,11 @@ fn draw_mission_progress(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_widget(gauge, area);
 }
 
-fn draw_fleet(frame: &mut Frame, area: Rect, simulation: &Simulation, ui_state: &mut UiState) {
+fn draw_fleet(frame: &mut Frame, area: Rect, simulation: &FleetSnapshot, ui_state: &mut UiState) {
     let block = Block::default()
         .borders(Borders::ALL)
         .border_style(MUTED)
-        .title(format!(" FLEET  {} UNITS ", simulation.drone_count()).fg(Color::Gray));
+        .title(format!(" FLEET  {} UNITS ", simulation.drones.len()).fg(Color::Gray));
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
@@ -120,24 +119,26 @@ fn draw_fleet(frame: &mut Frame, area: Rect, simulation: &Simulation, ui_state: 
     frame.render_widget(Paragraph::new(header).style(MUTED), rows[0]);
 
     let items = simulation
-        .drones()
-        .map(|drone| {
+        .drones
+        .iter()
+        .map(|mission_drone| {
+            let drone = &mission_drone.drone;
             let progress = task_progress(drone);
-            let phase_color = phase_color(drone.flight_mode());
-            let battery_color = if drone.battery_percentage() < 20.0 {
+            let phase_color = phase_color(&drone.flight_mode);
+            let battery_color = if drone.battery_percentage < 20.0 {
                 Color::Red
-            } else if drone.battery_percentage() < 40.0 {
+            } else if drone.battery_percentage < 40.0 {
                 Color::Yellow
             } else {
                 Color::Gray
             };
 
             ListItem::new(Line::from(vec![
-                format!("{:<13}", drone.name()).fg(Color::Gray).bold(),
-                format!("{:<14}", format_task(drone.current_task())).fg(ACCENT),
-                format!("{:<15}", format!("{:?}", drone.flight_mode())).fg(phase_color),
-                format!("{:>3.0}%  ", drone.battery_percentage()).fg(battery_color),
-                format!("{:<8}", signal_bar(drone.connection_status())).fg(ACCENT),
+                format!("{:<13}", drone.name).fg(Color::Gray).bold(),
+                format!("{:<14}", format_task(drone.current_task.as_ref())).fg(ACCENT),
+                format!("{:<15}", format!("{:?}", drone.flight_mode)).fg(phase_color),
+                format!("{:>3.0}%  ", drone.battery_percentage).fg(battery_color),
+                format!("{:<8}", signal_bar(&drone.connection_status)).fg(ACCENT),
                 progress_bar(progress, 10).fg(ACCENT),
                 format!(" {:>3.0}%", progress * 100.0).fg(Color::Gray),
             ]))
@@ -151,22 +152,22 @@ fn draw_fleet(frame: &mut Frame, area: Rect, simulation: &Simulation, ui_state: 
     frame.render_stateful_widget(list, rows[1], &mut ui_state.fleet);
 }
 
-fn task_progress(drone: &Drone) -> f64 {
-    match drone.current_task() {
+fn task_progress(drone: &DroneSnapshot) -> f64 {
+    match drone.current_task.as_ref() {
         Some(DroneTask::Takeoff { target_altitude }) => {
-            (drone.altitude() / target_altitude).clamp(0.0, 1.0) as f64
+            (drone.altitude / *target_altitude).clamp(0.0, 1.0) as f64
         }
         Some(DroneTask::FlyTo { target }) => {
-            calculate_flight_progress(drone.flight_start_position(), drone.coordinates(), target)
+            calculate_flight_progress(&drone.flight_start_position, &drone.coordinates, target)
         }
         Some(DroneTask::ReturnHome) => calculate_flight_progress(
-            drone.flight_start_position(),
-            drone.coordinates(),
-            drone.home_position(),
+            &drone.flight_start_position,
+            &drone.coordinates,
+            &drone.home_position,
         ),
         Some(DroneTask::Hold) => 1.0,
         Some(DroneTask::Land) => 0.0,
-        None if drone.flight_mode() == &FlightMode::Idle => 1.0,
+        None if drone.flight_mode == FlightMode::Idle => 1.0,
         None => 0.0,
     }
 }
@@ -228,10 +229,10 @@ fn format_task(task: Option<&DroneTask>) -> &'static str {
 fn draw_selected_drone(
     frame: &mut Frame,
     area: Rect,
-    simulation: &Simulation,
+    simulation: &FleetSnapshot,
     selected: Option<usize>,
 ) {
-    let Some(mission_drone) = selected.and_then(|index| simulation.mission_drone(index)) else {
+    let Some(mission_drone) = selected.and_then(|index| simulation.drones.get(index)) else {
         frame.render_widget(
             Paragraph::new("No drone selected")
                 .block(Block::default().borders(Borders::ALL).border_style(MUTED)),
@@ -240,12 +241,12 @@ fn draw_selected_drone(
         return;
     };
 
-    let drone = mission_drone.drone();
-    let id = drone.id().to_string();
+    let drone = &mission_drone.drone;
+    let id = drone.id.to_string();
     let block = Block::default()
         .borders(Borders::ALL)
         .border_style(MUTED)
-        .title(format!(" SELECTED UNIT  {} · {} ", drone.name(), &id[..8]).fg(Color::Gray));
+        .title(format!(" SELECTED UNIT  {} · {} ", drone.name, &id[..8]).fg(Color::Gray));
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
@@ -253,9 +254,9 @@ fn draw_selected_drone(
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(inner);
-    let battery_color = if drone.battery_percentage() < 20.0 {
+    let battery_color = if drone.battery_percentage < 20.0 {
         Color::Red
-    } else if drone.battery_percentage() < 40.0 {
+    } else if drone.battery_percentage < 40.0 {
         Color::Yellow
     } else {
         ACCENT
@@ -264,47 +265,45 @@ fn draw_selected_drone(
         Line::from(vec![" TELEMETRY".fg(ACCENT).bold()]),
         Line::from(format!(
             " alt {:>5.1} m    speed {:>5.1} m/s",
-            drone.altitude(),
-            drone.speed()
+            drone.altitude, drone.speed
         )),
         Line::from(format!(
             " mode {:<12?} {:?}",
-            drone.flight_mode(),
-            drone.connection_status()
+            drone.flight_mode, drone.connection_status
         )),
         Line::from(vec![
             Span::raw(" bat  "),
-            progress_bar(drone.battery_percentage() as f64 / 100.0, 8).fg(battery_color),
+            progress_bar(drone.battery_percentage as f64 / 100.0, 8).fg(battery_color),
             format!(
                 " {:>3.0}%   {}",
-                drone.battery_percentage(),
-                signal_bar(drone.connection_status())
+                drone.battery_percentage,
+                signal_bar(&drone.connection_status)
             )
             .fg(Color::Gray),
         ]),
         Line::from(format!(
             " pos  {:.5}, {:.5}",
-            drone.coordinates().latitude(),
-            drone.coordinates().longitude()
+            drone.coordinates.latitude(),
+            drone.coordinates.longitude()
         )),
     ];
     frame.render_widget(Paragraph::new(telemetry).style(Color::Gray), columns[0]);
 
-    let current = mission_drone.current_task_index();
-    let finished = drone.current_task().is_none() && drone.flight_mode() == &FlightMode::Idle;
+    let current = mission_drone.current_task_index;
+    let finished = drone.current_task.is_none() && drone.flight_mode == FlightMode::Idle;
     let progress = task_progress(drone);
     let mut tasks = vec![Line::from(
         format!(
             " TASK QUEUE  {}/{:02}",
             current + 1,
-            mission_drone.tasks().len()
+            mission_drone.tasks.len()
         )
         .fg(ACCENT)
         .bold(),
     )];
     tasks.extend(
         mission_drone
-            .tasks()
+            .tasks
             .iter()
             .enumerate()
             .skip(current.saturating_sub(1))

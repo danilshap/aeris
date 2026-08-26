@@ -87,7 +87,7 @@ impl Drone {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::drone::{Coordinates, DroneConfig};
+    use crate::{coordinates::Coordinates, drone::DroneConfig};
 
     fn drone() -> Drone {
         Drone::new(

@@ -1,8 +1,6 @@
 use serde::Deserialize;
 
-use crate::coordinates::Coordinates;
-use crate::drone::DroneConfig;
-use crate::mission::DroneTask;
+use crate::{coordinates::Coordinates, drone::DroneTask};
 
 #[derive(Debug, Deserialize)]
 pub struct MissionConfig {
@@ -16,9 +14,4 @@ pub struct MissionGroupConfig {
     pub drone_names: Vec<String>,
     pub home_position: Coordinates,
     pub tasks: Vec<DroneTask>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct DroneCatalog {
-    pub drones: Vec<DroneConfig>,
 }

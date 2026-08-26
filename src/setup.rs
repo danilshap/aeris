@@ -1,8 +1,7 @@
 use crate::{
-    drone::Drone,
+    drone::{Drone, DroneCatalog},
     errors::AerisError,
-    mission::{Mission, MissionDrone},
-    mission_config::{DroneCatalog, MissionConfig},
+    mission::{Mission, MissionConfig, MissionDrone},
     simulation::Simulation,
 };
 

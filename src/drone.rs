@@ -1,32 +1,20 @@
+mod commands;
 mod config;
 mod flight;
+mod snapshot;
+mod state;
+mod task;
 mod tick;
 
 use crate::coordinates::Coordinates;
 use crate::errors::AerisError;
-use crate::mission::DroneTask;
 use uuid::Uuid;
 
-pub use config::DroneConfig;
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum ConnectionStatus {
-    Disconnected,
-    Connecting,
-    Connected,
-    Lost,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum FlightMode {
-    Idle,
-    Armed,
-    Takeoff,
-    Hold,
-    Mission,
-    ReturnToHome,
-    Landing,
-}
+pub use commands::{DroneCommand, DroneEvent};
+pub use config::{DroneCatalog, DroneConfig};
+pub use snapshot::DroneSnapshot;
+pub use state::{ConnectionStatus, FlightMode};
+pub use task::DroneTask;
 
 #[derive(Debug, Clone)]
 pub struct Drone {

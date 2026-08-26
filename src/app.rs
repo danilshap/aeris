@@ -1,18 +1,17 @@
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::{Receiver, SyncSender};
 
 use crossterm::event::KeyCode;
 
 use crate::{
-    commands::{SimulationCommand, SimulationEvent},
     errors::AerisError,
-    simulation::Simulation,
+    simulation::{FleetSnapshot, SimulationCommand, SimulationEvent},
     ui::UiState,
 };
 
 pub struct App {
-    simulation: Simulation,
+    simulation: FleetSnapshot,
     ui_state: UiState,
-    commands: Sender<SimulationCommand>,
+    commands: SyncSender<SimulationCommand>,
     events: Receiver<SimulationEvent>,
     should_quit: bool,
     failure: Option<String>,
@@ -20,9 +19,9 @@ pub struct App {
 
 impl App {
     pub fn new(
-        simulation: Simulation,
+        simulation: FleetSnapshot,
         ui_state: UiState,
-        commands: Sender<SimulationCommand>,
+        commands: SyncSender<SimulationCommand>,
         events: Receiver<SimulationEvent>,
     ) -> Self {
         Self {
@@ -35,19 +34,19 @@ impl App {
         }
     }
 
-    pub fn simulation(&self) -> &Simulation {
+    pub fn simulation(&self) -> &FleetSnapshot {
         &self.simulation
     }
 
     pub fn mission_name(&self) -> Option<&str> {
-        self.simulation.mission_name()
+        self.simulation.mission_name.as_deref()
     }
 
     pub fn ui_state(&self) -> &UiState {
         &self.ui_state
     }
 
-    pub fn fleet_state(&mut self) -> (&Simulation, &mut UiState) {
+    pub fn fleet_state(&mut self) -> (&FleetSnapshot, &mut UiState) {
         (&self.simulation, &mut self.ui_state)
     }
 
@@ -56,11 +55,11 @@ impl App {
     }
 
     pub fn is_paused(&self) -> bool {
-        self.simulation.is_paused()
+        self.simulation.paused
     }
 
     pub fn is_finished(&self) -> bool {
-        self.simulation.is_finished()
+        self.simulation.finished
     }
 
     pub fn receive_simulation_events(&mut self) {
@@ -81,7 +80,7 @@ impl App {
     }
 
     pub fn next_drone(&mut self) {
-        self.ui_state.next_drone(self.simulation.drone_count());
+        self.ui_state.next_drone(self.simulation.drones.len());
     }
 
     pub fn handle_key(&mut self, code: KeyCode) -> Result<(), AerisError> {

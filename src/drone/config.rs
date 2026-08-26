@@ -10,3 +10,8 @@ pub struct DroneConfig {
     pub battery_capacity: f32,
     pub consumption_per_second: f32,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct DroneCatalog {
+    pub drones: Vec<DroneConfig>,
+}

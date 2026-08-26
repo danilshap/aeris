@@ -1,9 +1,9 @@
 use crate::{
-    drone::FlightMode,
+    drone::{DroneCatalog, DroneTask, FlightMode},
     errors::AerisError,
-    mission::DroneTask,
-    mission_config::{DroneCatalog, MissionConfig},
 };
+
+use super::MissionConfig;
 
 pub struct MissionValidator;
 
@@ -123,11 +123,9 @@ impl MissionValidator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        coordinates::Coordinates,
-        drone::DroneConfig,
-        mission_config::{DroneCatalog, MissionGroupConfig},
-    };
+    use crate::{coordinates::Coordinates, drone::DroneConfig};
+
+    use super::super::config::MissionGroupConfig;
 
     fn drone_catalog() -> DroneCatalog {
         DroneCatalog {

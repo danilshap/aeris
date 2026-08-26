@@ -4,7 +4,6 @@ use crossterm::event::{self, Event, KeyEventKind};
 
 use crate::{
     app::App,
-    commands::{SimulationCommand, SimulationEvent, spawn_simulation_worker},
     errors::AerisError,
     loader::{load_drone_catalog, load_mission_config},
     mission::MissionValidator,
@@ -12,13 +11,11 @@ use crate::{
 };
 
 mod app;
-mod commands;
 mod coordinates;
 mod drone;
 mod errors;
 mod loader;
 mod mission;
-mod mission_config;
 mod setup;
 mod simulation;
 mod ui;
@@ -33,12 +30,12 @@ fn main() -> Result<(), AerisError> {
     MissionValidator::validate(&mission_config, &drone_catalog)?;
 
     let simulation = build_simulation(&mission_config, &drone_catalog)?;
-    let initial_snapshot = simulation.clone();
+    let initial_snapshot = simulation.snapshot();
 
-    let (command_sender, command_receiver) = mpsc::channel::<SimulationCommand>();
-    let (event_sender, event_receiver) = mpsc::channel::<SimulationEvent>();
+    let (command_sender, command_receiver) = mpsc::sync_channel(8);
+    let (event_sender, event_receiver) = mpsc::sync_channel(8);
 
-    let worker = spawn_simulation_worker(
+    let simulation_worker = simulation::spawn_simulation_worker(
         simulation,
         command_receiver,
         event_sender,
@@ -70,7 +67,9 @@ fn main() -> Result<(), AerisError> {
 
     drop(app);
 
-    worker.join().expect("simulation worker panicked");
+    simulation_worker
+        .join()
+        .expect("simulation worker panicked");
 
     ui_result
 }

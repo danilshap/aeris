@@ -1,8 +1,7 @@
-use super::{ConnectionStatus, Drone, FlightMode};
+use super::{ConnectionStatus, Drone, DroneTask, FlightMode};
 use crate::{
     coordinates::{Coordinates, METERS_PER_LATITUDE_DEGREE},
     errors::AerisError,
-    mission::DroneTask,
 };
 
 impl Drone {
@@ -131,7 +130,7 @@ impl Drone {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::drone::{Coordinates, DroneConfig};
+    use crate::{coordinates::Coordinates, drone::DroneConfig};
 
     fn drone_at(altitude: f32) -> Drone {
         Drone::new(

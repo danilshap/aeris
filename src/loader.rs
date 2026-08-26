@@ -1,9 +1,6 @@
 use std::fs;
 
-use crate::{
-    errors::AerisError,
-    mission_config::{DroneCatalog, MissionConfig},
-};
+use crate::{drone::DroneCatalog, errors::AerisError, mission::MissionConfig};
 
 pub fn load_drone_catalog(path: &str) -> Result<DroneCatalog, AerisError> {
     let content = fs::read_to_string(path)?;
