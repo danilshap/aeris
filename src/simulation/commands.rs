@@ -1,5 +1,5 @@
 use std::{
-    sync::mpsc::{Receiver, RecvTimeoutError, SyncSender},
+    sync::mpsc::{Receiver, RecvTimeoutError, SyncSender, TryRecvError, TrySendError},
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
@@ -124,11 +124,7 @@ fn tick_drones(
             continue;
         }
 
-        worker
-            .send(DroneCommand::Tick(delta_time))
-            .map_err(|error| error.to_string())?;
-
-        let (drone_snapshot, current_task_index, is_finished) = match worker.recv() {
+        let (drone_snapshot, current_task_index, is_finished) = match worker.try_recv() {
             Ok(DroneEvent::Telemetry {
                 snapshot,
                 current_task_index,
@@ -138,7 +134,10 @@ fn tick_drones(
                 current_task_index,
             }) => (snapshot, current_task_index, true),
             Ok(DroneEvent::Failed(error)) => return Err(error),
-            Err(error) => return Err(error.to_string()),
+            Err(TryRecvError::Empty) => continue,
+            Err(TryRecvError::Disconnected) => {
+                return Err("drone worker disconnected".to_string());
+            }
         };
 
         snapshot.drones[index].drone = drone_snapshot;
@@ -146,6 +145,19 @@ fn tick_drones(
         finished[index] = is_finished;
     }
 
+    for (index, worker) in workers.iter().enumerate() {
+        if finished[index] {
+            continue;
+        }
+
+        match worker.try_send(DroneCommand::Tick(delta_time)) {
+            Ok(()) | Err(TrySendError::Full(_)) => {}
+            Err(TrySendError::Disconnected(_)) => {
+                return Err("drone worker disconnected".to_string());
+            }
+        }
+    }
+    
     snapshot.finished = !finished.is_empty() && finished.iter().all(|finished| *finished);
 
     snapshot.progress = if snapshot.drones.is_empty() {

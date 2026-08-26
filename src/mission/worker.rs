@@ -35,8 +35,12 @@ impl DroneHandle {
         self.commands.send(command)
     }
 
-    pub fn recv(&self) -> Result<DroneEvent, mpsc::RecvError> {
-        self.events.recv()
+    pub fn try_send(&self, command: DroneCommand) -> Result<(), mpsc::TrySendError<DroneCommand>> {
+        self.commands.try_send(command)
+    }
+
+    pub fn try_recv(&self) -> Result<DroneEvent, mpsc::TryRecvError> {
+        self.events.try_recv()
     }
 
     pub fn join(self) -> thread::Result<()> {
