@@ -4,7 +4,7 @@ use crate::errors::AerisError;
 impl Drone {
     pub fn arm(&mut self) -> Result<(), AerisError> {
         if self.connection_status != ConnectionStatus::Connected {
-            return Err(AerisError::UnexeptbleState {
+            return Err(AerisError::UnexpectedState {
                 action: "arm".to_string(),
                 state: format!("{:?}", self.connection_status),
             });
@@ -153,7 +153,7 @@ mod tests {
 
         assert!(matches!(
             result,
-            Err(AerisError::UnexeptbleState { action, state })
+            Err(AerisError::UnexpectedState { action, state })
                 if action == "arm" && state == "Disconnected"
         ));
         assert_eq!(drone.flight_mode(), &FlightMode::Idle);

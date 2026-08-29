@@ -5,26 +5,21 @@ use crate::{
 
 use super::MissionConfig;
 
-pub struct MissionValidator;
-
-impl MissionValidator {
-    pub fn validate(
-        mission: &MissionConfig,
-        drone_catalog: &DroneCatalog,
-    ) -> Result<(), AerisError> {
-        if mission.name.trim().is_empty() {
+impl MissionConfig {
+    pub fn validate(&self, drone_catalog: &DroneCatalog) -> Result<(), AerisError> {
+        if self.name.trim().is_empty() {
             return Err(AerisError::InvalidMission(
                 "mission name cannot be empty".to_string(),
             ));
         }
 
-        if mission.groups.is_empty() {
+        if self.groups.is_empty() {
             return Err(AerisError::InvalidMission(
                 "mission must contain at least one group".to_string(),
             ));
         }
 
-        for group in &mission.groups {
+        for group in &self.groups {
             if group.drone_names.is_empty() {
                 return Err(AerisError::InvalidMission(format!(
                     "group '{}' must contain at least one drone",
@@ -172,7 +167,7 @@ mod tests {
             DroneTask::Land,
         ]);
 
-        assert!(MissionValidator::validate(&mission, &drone_catalog()).is_ok());
+        assert!(mission.validate(&drone_catalog()).is_ok());
     }
 
     #[test]
@@ -180,7 +175,7 @@ mod tests {
         let mission = mission(vec![DroneTask::Land]);
 
         assert!(matches!(
-            MissionValidator::validate(&mission, &drone_catalog()),
+            mission.validate(&drone_catalog()),
             Err(AerisError::InvalidMission(_))
         ));
     }
@@ -192,7 +187,7 @@ mod tests {
         }]);
 
         assert!(matches!(
-            MissionValidator::validate(&mission, &drone_catalog()),
+            mission.validate(&drone_catalog()),
             Err(AerisError::InvalidMission(_))
         ));
     }
@@ -209,7 +204,7 @@ mod tests {
         ]);
 
         assert!(matches!(
-            MissionValidator::validate(&mission, &drone_catalog()),
+            mission.validate(&drone_catalog()),
             Err(AerisError::InvalidMission(_))
         ));
     }
@@ -224,7 +219,7 @@ mod tests {
         }]);
 
         assert!(matches!(
-            MissionValidator::validate(&mission, &catalog),
+            mission.validate(&catalog),
             Err(AerisError::InvalidMission(_))
         ));
     }
@@ -239,7 +234,7 @@ mod tests {
         }]);
 
         assert!(matches!(
-            MissionValidator::validate(&mission, &catalog),
+            mission.validate(&catalog),
             Err(AerisError::InvalidMission(_))
         ));
     }

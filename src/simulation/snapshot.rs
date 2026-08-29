@@ -24,8 +24,8 @@ impl Simulation {
                 .missions
                 .first()
                 .map(|mission| mission.name().to_owned()),
-            paused: self.is_paused(),
-            finished: self.is_finished(),
+            paused: false,
+            finished: false,
             progress,
             drones: self
                 .missions

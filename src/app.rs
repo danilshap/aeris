@@ -10,7 +10,6 @@ use crate::{
     drone::DroneCatalog,
     errors::AerisError,
     loader::load_mission_config,
-    mission::MissionValidator,
     setup::build_simulation,
     simulation,
     simulation::{FleetSnapshot, SimulationCommand, SimulationEvent},
@@ -176,7 +175,7 @@ impl App {
 
     fn start_selected_mission(&mut self) -> Result<(), AerisError> {
         let mission_config = load_mission_config(MISSIONS[self.selected_mission].path)?;
-        MissionValidator::validate(&mission_config, &self.drone_catalog)?;
+        mission_config.validate(&self.drone_catalog)?;
 
         let simulation = build_simulation(&mission_config, &self.drone_catalog)?;
         let initial_snapshot = simulation.snapshot();

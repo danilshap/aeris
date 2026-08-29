@@ -55,7 +55,7 @@ fn spawn_drone_worker(
 ) -> JoinHandle<()> {
     thread::spawn(move || {
         let mut sequence_number = 0;
-        
+
         while let Ok(DroneCommand::Tick(delta_time)) = commands.recv() {
             if let Err(error) = mission_drone.tick(delta_time) {
                 let _ = events.send(DroneEvent::Failed(error.to_string()));

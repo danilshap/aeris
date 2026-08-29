@@ -40,8 +40,7 @@ pub fn build_simulation(
         mission_drones[failed_index].fail_after(10);
     }
 
-    let mut mission = Mission::new(mission_config.name.clone(), mission_drones);
-    mission.start()?;
+    let mission = Mission::new(mission_config.name.clone(), mission_drones);
     simulation.add_mission(mission);
 
     Ok(simulation)

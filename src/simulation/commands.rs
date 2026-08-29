@@ -376,8 +376,7 @@ mod tests {
 
     #[test]
     fn worker_handles_pause_resume_and_shutdown() {
-        let mut mission = Mission::new("test".to_string(), vec![]);
-        mission.start().unwrap();
+        let mission = Mission::new("test".to_string(), vec![]);
 
         let mut simulation = Simulation::new();
         simulation.add_mission(mission);
@@ -485,12 +484,10 @@ mod tests {
         drone.connect().unwrap();
         drone.arm().unwrap();
 
-        let mut mission = Mission::new(
+        let mission = Mission::new(
             "test".to_string(),
             vec![MissionDrone::new(drone, vec![DroneTask::Land])],
         );
-        mission.start().unwrap();
-
         let mut simulation = Simulation::new();
         simulation.add_mission(mission);
         let (_command_sender, command_receiver) = mpsc::sync_channel(2);
@@ -550,7 +547,7 @@ mod tests {
         healthy_drone.connect().unwrap();
         healthy_drone.arm().unwrap();
 
-        let mut mission = Mission::new(
+        let mission = Mission::new(
             "test".to_string(),
             vec![
                 MissionDrone::new(
@@ -567,8 +564,6 @@ mod tests {
                 ),
             ],
         );
-        mission.start().unwrap();
-
         let mut simulation = Simulation::new();
         simulation.add_mission(mission);
         let (command_sender, command_receiver) = mpsc::sync_channel(2);

@@ -22,7 +22,7 @@ fn main() -> Result<(), AerisError> {
     let ui_state = ui::UiState::new();
     let mut app = App::new(drone_catalog, ui_state);
 
-    let ui_result = ratatui::run(|terminal| {
+    ratatui::run(|terminal| {
         while !app.should_quit() {
             app.receive_simulation_events();
 
@@ -38,7 +38,5 @@ fn main() -> Result<(), AerisError> {
 
         terminal.draw(|frame| ui::draw(frame, &mut app))?;
         Ok(())
-    });
-
-    ui_result
+    })
 }

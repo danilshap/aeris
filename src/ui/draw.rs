@@ -13,9 +13,25 @@ use crate::{
     ui::UiState,
 };
 
-const ACCENT: Color = Color::LightCyan;
-const HOT: Color = Color::LightMagenta;
+const ACCENT: Color = Color::Rgb(78, 205, 196);
+const HOT: Color = Color::Rgb(255, 107, 107);
 const MUTED: Color = Color::DarkGray;
+const LOGO: [&str; 6] = [
+    r" █████╗ ███████╗██████╗ ██╗███████╗",
+    r"██╔══██╗██╔════╝██╔══██╗██║██╔════╝",
+    r"███████║█████╗  ██████╔╝██║███████╗",
+    r"██╔══██║██╔══╝  ██╔══██╗██║╚════██║",
+    r"██║  ██║███████╗██║  ██║██║███████║",
+    r"╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝╚══════╝",
+];
+const LOGO_COLORS: [Color; 6] = [
+    HOT,
+    Color::Rgb(220, 127, 124),
+    Color::Rgb(185, 146, 141),
+    Color::Rgb(149, 166, 159),
+    Color::Rgb(114, 185, 177),
+    ACCENT,
+];
 
 pub fn draw(frame: &mut Frame, app: &mut App) {
     if app.is_home() {
@@ -73,24 +89,19 @@ fn draw_start_screen(frame: &mut Frame, app: &App) {
             .split(area)[1]
     };
 
-    let logo = [
-        r"    _    _____ ____  ___ ____  ",
-        r"   / \  | ____|  _ \|_ _/ ___| ",
-        r"  / _ \ |  _| | |_) || |\___ \ ",
-        r" / ___ \| |___|  _ < | | ___) |",
-        r"/_/   \_\_____|_| \_\___|____/ ",
-    ]
-    .join("\n");
+    let logo = LOGO
+        .into_iter()
+        .zip(LOGO_COLORS)
+        .map(|(text, color)| Line::from(text).fg(color).bold())
+        .collect::<Vec<_>>();
     frame.render_widget(
-        Paragraph::new(logo)
-            .alignment(Alignment::Center)
-            .style(Style::new().fg(ACCENT).bold()),
+        Paragraph::new(logo).alignment(Alignment::Center),
         center(vertical[1]),
     );
     frame.render_widget(
-        Paragraph::new("AUTONOMOUS DRONE MISSION SIMULATOR")
+        Paragraph::new(Line::from("┄".repeat(44)).fg(HOT))
             .alignment(Alignment::Center)
-            .style(MUTED),
+            .style(Style::new().bold()),
         center(vertical[2]),
     );
 
@@ -421,36 +432,4 @@ fn draw_footer(frame: &mut Frame, area: Rect, paused: bool) {
         Paragraph::new(text).block(Block::default().borders(Borders::ALL).border_style(MUTED)),
         area,
     );
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{
-        coordinates::Coordinates,
-        drone::{Drone, DroneConfig, DroneSnapshot},
-    };
-
-    #[test]
-    fn calculates_landing_progress_from_starting_altitude() {
-        let mut drone = Drone::new(
-            "test".to_string(),
-            Coordinates::new(0.0, 0.0),
-            100.0,
-            0.0,
-            DroneConfig {
-                name: "test".to_string(),
-                max_speed: 10.0,
-                climb_speed: 1.0,
-                descent_speed: 1.0,
-                max_altitude: 100.0,
-                battery_capacity: 100.0,
-                consumption_per_second: 0.0,
-            },
-        );
-        drone.assign_task(Some(DroneTask::Land));
-        drone.tick(25.0).unwrap();
-
-        assert_eq!(DroneSnapshot::from(&drone).task_progress(), 0.25);
-    }
 }

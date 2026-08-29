@@ -4,7 +4,7 @@ mod snapshot;
 pub use commands::{SimulationCommand, SimulationEvent, spawn_simulation_worker};
 pub use snapshot::FleetSnapshot;
 
-use crate::mission::{Mission, MissionDrone, MissionState};
+use crate::mission::{Mission, MissionDrone};
 
 #[derive(Debug, Clone)]
 pub struct Simulation {
@@ -25,15 +25,5 @@ impl Simulation {
 
     pub fn add_mission(&mut self, mission: Mission) {
         self.missions.push(mission);
-    }
-
-    pub fn is_paused(&self) -> bool {
-        self.missions
-            .iter()
-            .any(|mission| mission.state() == &MissionState::Paused)
-    }
-
-    pub fn is_finished(&self) -> bool {
-        !self.missions.is_empty() && self.missions.iter().all(Mission::is_finished)
     }
 }

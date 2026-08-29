@@ -88,6 +88,7 @@ fn distance(first: &Coordinates, second: &Coordinates) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::drone::DroneConfig;
 
     #[test]
     fn calculates_progress_between_coordinates() {
@@ -96,5 +97,28 @@ mod tests {
         let target = Coordinates::new(20.0, 40.0);
 
         assert_eq!(calculate_flight_progress(&start, &current, &target), 0.5);
+    }
+
+    #[test]
+    fn calculates_landing_progress_from_starting_altitude() {
+        let mut drone = Drone::new(
+            "test".to_string(),
+            Coordinates::new(0.0, 0.0),
+            100.0,
+            0.0,
+            DroneConfig {
+                name: "test".to_string(),
+                max_speed: 10.0,
+                climb_speed: 1.0,
+                descent_speed: 1.0,
+                max_altitude: 100.0,
+                battery_capacity: 100.0,
+                consumption_per_second: 0.0,
+            },
+        );
+        drone.assign_task(Some(DroneTask::Land));
+        drone.tick(25.0).unwrap();
+
+        assert_eq!(DroneSnapshot::from(&drone).task_progress(), 0.25);
     }
 }

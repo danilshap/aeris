@@ -2,8 +2,8 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum AerisError {
-    #[error("Cant process {action} with {state} state")]
-    UnexeptbleState { action: String, state: String },
+    #[error("Cannot process {action} with {state} state")]
+    UnexpectedState { action: String, state: String },
 
     #[error("Cannot change flight mode from {from} to {to}")]
     InvalidFlightModeTransition { from: String, to: String },

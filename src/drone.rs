@@ -106,7 +106,7 @@ impl Drone {
 
     pub fn connect(&mut self) -> Result<(), AerisError> {
         match self.connection_status {
-            ConnectionStatus::Connecting => Err(AerisError::UnexeptbleState {
+            ConnectionStatus::Connecting => Err(AerisError::UnexpectedState {
                 action: String::from("connect"),
                 state: format!("{:?}", self.connection_status),
             }),
