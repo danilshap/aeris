@@ -1,0 +1,21 @@
+name = "long-patrol"
+
+[[groups]]
+drone_type = "scout"
+drone_names = ["DR-LNG-01", "DR-LNG-02"]
+home_position = { latitude = 50.4501, longitude = 30.5234 }
+
+[[groups.tasks]]
+type = "Takeoff"
+target_altitude = 10.0
+
+[[groups.tasks]]
+type = "FlyTo"
+target = { latitude = 50.4501, longitude = 30.5338 }
+
+[[groups.tasks]]
+type = "FlyTo"
+target = { latitude = 50.4501, longitude = 30.5234 }
+
+[[groups.tasks]]
+type = "Land"

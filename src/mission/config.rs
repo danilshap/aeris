@@ -5,6 +5,8 @@ use crate::{coordinates::Coordinates, drone::DroneTask};
 #[derive(Debug, Deserialize)]
 pub struct MissionConfig {
     pub name: String,
+    #[serde(default)]
+    pub random_failure: bool,
     pub groups: Vec<MissionGroupConfig>,
 }
 

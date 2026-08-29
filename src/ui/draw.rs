@@ -1,15 +1,14 @@
 use ratatui::{
     Frame,
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
     text::{Line, Span},
     widgets::{Block, Borders, Gauge, List, ListItem, Paragraph},
 };
 
 use crate::{
-    app::App,
-    coordinates::Coordinates,
-    drone::{ConnectionStatus, DroneSnapshot, DroneTask, FlightMode},
+    app::{App, MISSIONS},
+    drone::{ConnectionStatus, DroneTask, FlightMode},
     simulation::FleetSnapshot,
     ui::UiState,
 };
@@ -19,6 +18,11 @@ const HOT: Color = Color::LightMagenta;
 const MUTED: Color = Color::DarkGray;
 
 pub fn draw(frame: &mut Frame, app: &mut App) {
+    if app.is_home() {
+        draw_start_screen(frame, app);
+        return;
+    }
+
     let fleet_height = app.simulation().drones.len() as u16 + 3;
     let layout = Layout::default()
         .direction(Direction::Vertical)
@@ -44,6 +48,87 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         app.ui_state().selected_drone(),
     );
     draw_footer(frame, layout[4], app.is_paused());
+}
+
+fn draw_start_screen(frame: &mut Frame, app: &App) {
+    let vertical = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Fill(1),
+            Constraint::Length(6),
+            Constraint::Length(2),
+            Constraint::Length(8),
+            Constraint::Length(3),
+            Constraint::Fill(1),
+        ])
+        .split(frame.area());
+    let center = |area| {
+        Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Percentage(15),
+                Constraint::Percentage(70),
+                Constraint::Percentage(15),
+            ])
+            .split(area)[1]
+    };
+
+    let logo = [
+        r"    _    _____ ____  ___ ____  ",
+        r"   / \  | ____|  _ \|_ _/ ___| ",
+        r"  / _ \ |  _| | |_) || |\___ \ ",
+        r" / ___ \| |___|  _ < | | ___) |",
+        r"/_/   \_\_____|_| \_\___|____/ ",
+    ]
+    .join("\n");
+    frame.render_widget(
+        Paragraph::new(logo)
+            .alignment(Alignment::Center)
+            .style(Style::new().fg(ACCENT).bold()),
+        center(vertical[1]),
+    );
+    frame.render_widget(
+        Paragraph::new("AUTONOMOUS DRONE MISSION SIMULATOR")
+            .alignment(Alignment::Center)
+            .style(MUTED),
+        center(vertical[2]),
+    );
+
+    let items = MISSIONS
+        .iter()
+        .map(|mission| {
+            ListItem::new(vec![
+                Line::from(format!("  {}", mission.name)).fg(ACCENT).bold(),
+                Line::from(format!("     {}", mission.description)).fg(Color::Gray),
+            ])
+        })
+        .collect::<Vec<_>>();
+    let list = List::new(items)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(MUTED)
+                .title(" SELECT MISSION ".fg(HOT)),
+        )
+        .highlight_symbol("▶ ")
+        .highlight_style(Style::new().bg(Color::Rgb(12, 26, 34)).bold());
+    let mut state = ratatui::widgets::ListState::default();
+    state.select(Some(app.selected_mission()));
+    frame.render_stateful_widget(list, center(vertical[3]), &mut state);
+
+    frame.render_widget(
+        Paragraph::new(Line::from(vec![
+            " ↑/↓ ".fg(ACCENT).bold(),
+            Span::raw("mission    "),
+            "enter ".fg(Color::Green).bold(),
+            Span::raw("start    "),
+            "q ".fg(HOT).bold(),
+            Span::raw("quit"),
+        ]))
+        .alignment(Alignment::Center)
+        .block(Block::default().borders(Borders::ALL).border_style(MUTED)),
+        center(vertical[4]),
+    );
 }
 
 fn draw_header(frame: &mut Frame, area: Rect, app: &App) {
@@ -123,7 +208,7 @@ fn draw_fleet(frame: &mut Frame, area: Rect, simulation: &FleetSnapshot, ui_stat
         .iter()
         .map(|mission_drone| {
             let drone = &mission_drone.drone;
-            let progress = task_progress(drone);
+            let progress = drone.task_progress();
             let phase = if mission_drone.failure.is_some() {
                 format!("{:<15}", "FAILED")
                     .fg(Color::Red)
@@ -158,47 +243,6 @@ fn draw_fleet(frame: &mut Frame, area: Rect, simulation: &FleetSnapshot, ui_stat
         .highlight_style(Style::new().bg(Color::Rgb(12, 26, 34)).bold());
 
     frame.render_stateful_widget(list, rows[1], &mut ui_state.fleet);
-}
-
-fn task_progress(drone: &DroneSnapshot) -> f64 {
-    match drone.current_task.as_ref() {
-        Some(DroneTask::Takeoff { target_altitude }) => {
-            (drone.altitude / *target_altitude).clamp(0.0, 1.0) as f64
-        }
-        Some(DroneTask::FlyTo { target }) => {
-            calculate_flight_progress(&drone.flight_start_position, &drone.coordinates, target)
-        }
-        Some(DroneTask::ReturnHome) => calculate_flight_progress(
-            &drone.flight_start_position,
-            &drone.coordinates,
-            &drone.home_position,
-        ),
-        Some(DroneTask::Hold) => 1.0,
-        Some(DroneTask::Land) => 0.0,
-        None if drone.flight_mode == FlightMode::Idle => 1.0,
-        None => 0.0,
-    }
-}
-
-fn calculate_flight_progress(
-    start: &Coordinates,
-    current: &Coordinates,
-    target: &Coordinates,
-) -> f64 {
-    let total_distance = distance(start, target);
-
-    if total_distance <= f64::EPSILON {
-        return 1.0;
-    }
-
-    (1.0 - distance(current, target) / total_distance).clamp(0.0, 1.0)
-}
-
-fn distance(first: &Coordinates, second: &Coordinates) -> f64 {
-    let dx = second.longitude() - first.longitude();
-    let dy = second.latitude() - first.latitude();
-
-    (dx * dx + dy * dy).sqrt()
 }
 
 fn progress_bar(progress: f64, width: usize) -> String {
@@ -299,7 +343,7 @@ fn draw_selected_drone(
 
     let current = mission_drone.current_task_index;
     let finished = drone.current_task.is_none() && drone.flight_mode == FlightMode::Idle;
-    let progress = task_progress(drone);
+    let progress = drone.task_progress();
     let mut tasks = vec![Line::from(
         format!(
             " TASK QUEUE  {}/{:02}",
@@ -367,6 +411,8 @@ fn draw_footer(frame: &mut Frame, area: Rect, paused: bool) {
         Span::raw("unit    "),
         "space ".fg(Color::Yellow).bold(),
         Span::raw(format!("{pause_action}    ")),
+        "esc ".fg(Color::Green).bold(),
+        Span::raw("menu    "),
         "q ".fg(HOT).bold(),
         Span::raw("quit"),
     ]);
@@ -380,13 +426,31 @@ fn draw_footer(frame: &mut Frame, area: Rect, paused: bool) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        coordinates::Coordinates,
+        drone::{Drone, DroneConfig, DroneSnapshot},
+    };
 
     #[test]
-    fn calculates_progress_between_coordinates() {
-        let start = Coordinates::new(10.0, 20.0);
-        let current = Coordinates::new(15.0, 30.0);
-        let target = Coordinates::new(20.0, 40.0);
+    fn calculates_landing_progress_from_starting_altitude() {
+        let mut drone = Drone::new(
+            "test".to_string(),
+            Coordinates::new(0.0, 0.0),
+            100.0,
+            0.0,
+            DroneConfig {
+                name: "test".to_string(),
+                max_speed: 10.0,
+                climb_speed: 1.0,
+                descent_speed: 1.0,
+                max_altitude: 100.0,
+                battery_capacity: 100.0,
+                consumption_per_second: 0.0,
+            },
+        );
+        drone.assign_task(Some(DroneTask::Land));
+        drone.tick(25.0).unwrap();
 
-        assert_eq!(calculate_flight_progress(&start, &current, &target), 0.5);
+        assert_eq!(DroneSnapshot::from(&drone).task_progress(), 0.25);
     }
 }

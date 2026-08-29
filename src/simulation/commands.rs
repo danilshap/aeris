@@ -186,6 +186,7 @@ fn tick_drones(
             .enumerate()
             .all(|(index, finished)| *finished || snapshot.drones[index].failure.is_some());
 
+    // Include active task progress so fleet progress updates between task transitions.
     snapshot.progress = if snapshot.drones.is_empty() {
         0.0
     } else {
@@ -199,7 +200,8 @@ fn tick_drones(
                 } else if drone.tasks.is_empty() {
                     0.0
                 } else {
-                    drone.current_task_index as f64 / drone.tasks.len() as f64
+                    (drone.current_task_index as f64 + drone.drone.task_progress())
+                        / drone.tasks.len() as f64
                 }
             })
             .sum::<f64>()
@@ -322,6 +324,28 @@ mod tests {
         assert_eq!(current_drone.drone.altitude, 2.0);
         assert_eq!(current_drone.current_task_index, 2);
         assert!(finished);
+    }
+
+    #[test]
+    fn fleet_progress_includes_current_task_progress() {
+        let task = DroneTask::Takeoff {
+            target_altitude: 100.0,
+        };
+        let mut drone = mission_drone_snapshot();
+        drone.tasks = vec![task.clone(), DroneTask::Land];
+        drone.drone.current_task = Some(task);
+        drone.drone.altitude = 25.0;
+        let mut snapshot = FleetSnapshot {
+            mission_name: None,
+            paused: false,
+            finished: false,
+            progress: 0.0,
+            drones: vec![drone],
+        };
+
+        tick_drones(&[], &mut snapshot, &mut [false], 0.1);
+
+        assert_eq!(snapshot.progress, 0.125);
     }
 
     #[test]

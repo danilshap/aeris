@@ -23,6 +23,7 @@ pub struct Drone {
     coordinates: Coordinates,
     home_position: Coordinates,
     flight_start_position: Coordinates,
+    flight_start_altitude: f32,
     altitude: f32,
     speed: f32,
     battery_charge: f32,
@@ -46,6 +47,7 @@ impl Drone {
             coordinates: home_position,
             home_position,
             flight_start_position: home_position,
+            flight_start_altitude: altitude,
             altitude,
             speed,
             battery_charge: config.battery_capacity,
@@ -121,6 +123,7 @@ impl Drone {
     pub fn assign_task(&mut self, new_task: Option<DroneTask>) {
         if new_task.is_some() {
             self.flight_start_position = self.coordinates;
+            self.flight_start_altitude = self.altitude;
         }
 
         self.current_task = new_task;

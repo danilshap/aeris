@@ -19,4 +19,7 @@ pub enum AerisError {
 
     #[error("Invalid mission. Reason: {0}")]
     InvalidMission(String),
+
+    #[error("Simulated failure of drone '{0}'")]
+    SimulatedDroneFailure(String),
 }

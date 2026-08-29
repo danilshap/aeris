@@ -1,14 +1,8 @@
-use std::{sync::mpsc, time::Duration};
+use std::time::Duration;
 
 use crossterm::event::{self, Event, KeyEventKind};
 
-use crate::{
-    app::App,
-    errors::AerisError,
-    loader::{load_drone_catalog, load_mission_config},
-    mission::MissionValidator,
-    setup::build_simulation,
-};
+use crate::{app::App, errors::AerisError, loader::load_drone_catalog};
 
 mod app;
 mod coordinates;
@@ -25,27 +19,8 @@ const TICK_RATE: Duration = Duration::from_millis(330);
 
 fn main() -> Result<(), AerisError> {
     let drone_catalog = load_drone_catalog("configs/drones.toml")?;
-    let mission_config = load_mission_config("configs/mission.toml")?;
-
-    MissionValidator::validate(&mission_config, &drone_catalog)?;
-
-    let simulation = build_simulation(&mission_config, &drone_catalog)?;
-    let initial_snapshot = simulation.snapshot();
-
-    let (command_sender, command_receiver) = mpsc::sync_channel(8);
-    let (event_sender, event_receiver) = mpsc::sync_channel(8);
-
-    let simulation_worker = simulation::spawn_simulation_worker(
-        simulation,
-        command_receiver,
-        event_sender,
-        TICK_RATE,
-        DELTA_TIME,
-    );
-
     let ui_state = ui::UiState::new();
-
-    let mut app = App::new(initial_snapshot, ui_state, command_sender, event_receiver);
+    let mut app = App::new(drone_catalog, ui_state);
 
     let ui_result = ratatui::run(|terminal| {
         while !app.should_quit() {
@@ -64,12 +39,6 @@ fn main() -> Result<(), AerisError> {
         terminal.draw(|frame| ui::draw(frame, &mut app))?;
         Ok(())
     });
-
-    drop(app);
-
-    simulation_worker
-        .join()
-        .expect("simulation worker panicked");
 
     ui_result
 }

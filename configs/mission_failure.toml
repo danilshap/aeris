@@ -1,0 +1,22 @@
+name = "fault-injection"
+random_failure = true
+
+[[groups]]
+drone_type = "scout"
+drone_names = ["DR-FLT-01", "DR-FLT-02", "DR-FLT-03"]
+home_position = { latitude = 50.4501, longitude = 30.5234 }
+
+[[groups.tasks]]
+type = "Takeoff"
+target_altitude = 10.0
+
+[[groups.tasks]]
+type = "FlyTo"
+target = { latitude = 50.4505, longitude = 30.5240 }
+
+[[groups.tasks]]
+type = "FlyTo"
+target = { latitude = 50.4501, longitude = 30.5234 }
+
+[[groups.tasks]]
+type = "Land"

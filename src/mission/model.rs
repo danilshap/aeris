@@ -16,6 +16,8 @@ pub struct MissionDrone {
     drone: Drone,
     tasks: Vec<DroneTask>,
     current_task_index: usize,
+    tick_count: u64,
+    failure_tick: Option<u64>,
 }
 
 impl MissionDrone {
@@ -26,6 +28,8 @@ impl MissionDrone {
             drone,
             tasks,
             current_task_index: 0,
+            tick_count: 0,
+            failure_tick: None,
         }
     }
 
@@ -41,7 +45,19 @@ impl MissionDrone {
         self.current_task_index
     }
 
+    pub fn fail_after(&mut self, ticks: u64) {
+        self.failure_tick = Some(ticks);
+    }
+
     pub(super) fn tick(&mut self, delta_time: f32) -> Result<(), AerisError> {
+        self.tick_count += 1;
+
+        if self.failure_tick == Some(self.tick_count) {
+            return Err(AerisError::SimulatedDroneFailure(
+                self.drone.name().to_string(),
+            ));
+        }
+
         self.drone.tick(delta_time)?;
 
         if self.drone.current_task().is_some() || self.is_finished() {

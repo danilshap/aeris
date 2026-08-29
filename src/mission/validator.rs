@@ -144,6 +144,7 @@ mod tests {
     fn mission(tasks: Vec<DroneTask>) -> MissionConfig {
         MissionConfig {
             name: "test".to_string(),
+            random_failure: false,
             groups: vec![MissionGroupConfig {
                 drone_type: "scout".to_string(),
                 drone_names: vec!["DR-SCO-01".to_string()],
