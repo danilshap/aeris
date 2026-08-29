@@ -124,7 +124,15 @@ fn draw_fleet(frame: &mut Frame, area: Rect, simulation: &FleetSnapshot, ui_stat
         .map(|mission_drone| {
             let drone = &mission_drone.drone;
             let progress = task_progress(drone);
-            let phase_color = phase_color(&drone.flight_mode);
+            let phase = if mission_drone.failure.is_some() {
+                format!("{:<15}", "FAILED")
+                    .fg(Color::Red)
+                    .bold()
+                    .slow_blink()
+            } else {
+                format!("{:<15}", format!("{:?}", drone.flight_mode))
+                    .fg(phase_color(&drone.flight_mode))
+            };
             let battery_color = if drone.battery_percentage < 20.0 {
                 Color::Red
             } else if drone.battery_percentage < 40.0 {
@@ -136,7 +144,7 @@ fn draw_fleet(frame: &mut Frame, area: Rect, simulation: &FleetSnapshot, ui_stat
             ListItem::new(Line::from(vec![
                 format!("{:<13}", drone.name).fg(Color::Gray).bold(),
                 format!("{:<14}", format_task(drone.current_task.as_ref())).fg(ACCENT),
-                format!("{:<15}", format!("{:?}", drone.flight_mode)).fg(phase_color),
+                phase,
                 format!("{:>3.0}%  ", drone.battery_percentage).fg(battery_color),
                 format!("{:<8}", signal_bar(&drone.connection_status)).fg(ACCENT),
                 progress_bar(progress, 10).fg(ACCENT),

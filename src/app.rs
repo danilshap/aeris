@@ -14,7 +14,6 @@ pub struct App {
     commands: SyncSender<SimulationCommand>,
     events: Receiver<SimulationEvent>,
     should_quit: bool,
-    failure: Option<String>,
 }
 
 impl App {
@@ -30,7 +29,6 @@ impl App {
             commands,
             events,
             should_quit: false,
-            failure: None,
         }
     }
 
@@ -67,10 +65,6 @@ impl App {
             match event {
                 SimulationEvent::Snapshot(simulation) => self.simulation = simulation,
                 SimulationEvent::Finished => self.should_quit = true,
-                SimulationEvent::Failed(error) => {
-                    self.failure = Some(error);
-                    self.should_quit = true;
-                }
             }
         }
     }

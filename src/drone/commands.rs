@@ -7,10 +7,12 @@ pub enum DroneCommand {
 
 pub enum DroneEvent {
     Telemetry {
+        sequence_number: u64,
         snapshot: DroneSnapshot,
         current_task_index: usize,
     },
     Finished {
+        sequence_number: u64,
         snapshot: DroneSnapshot,
         current_task_index: usize,
     },

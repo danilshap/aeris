@@ -54,6 +54,8 @@ fn spawn_drone_worker(
     events: SyncSender<DroneEvent>,
 ) -> JoinHandle<()> {
     thread::spawn(move || {
+        let mut sequence_number = 0;
+        
         while let Ok(DroneCommand::Tick(delta_time)) = commands.recv() {
             if let Err(error) = mission_drone.tick(delta_time) {
                 let _ = events.send(DroneEvent::Failed(error.to_string()));
@@ -63,14 +65,17 @@ fn spawn_drone_worker(
             let snapshot = DroneSnapshot::from(mission_drone.drone());
             let current_task_index = mission_drone.current_task_index();
             let finished = mission_drone.is_finished();
+            sequence_number += 1;
 
             let event = if finished {
                 DroneEvent::Finished {
+                    sequence_number,
                     snapshot,
                     current_task_index,
                 }
             } else {
                 DroneEvent::Telemetry {
+                    sequence_number,
                     snapshot,
                     current_task_index,
                 }
