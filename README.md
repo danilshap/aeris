@@ -182,7 +182,3 @@ cargo test
 ```
 
 The tests focus on domain transitions, mission validation, snapshot ordering, queue pressure, worker shutdown, and failure isolation. They use short simulated tick intervals, so the five-minute scenario does not take five real minutes to verify.
-
-## Current boundary
-
-Aeris currently runs locally and uses in-process channels. Network telemetry, operator-issued `ReturnHome`, latency metrics, and a headless load test are planned but not implemented yet. The staged plan and acceptance criteria live in [`ROADMAP.mdx`](ROADMAP.mdx).
